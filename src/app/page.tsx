@@ -41,7 +41,7 @@ export default function Home(){
     <section className="content">
       <header className="topbar">
         <div><h1>Central de Mercado</h1><p>Atualização configurada para 1 minuto • relatório a cada 10 minutos</p></div>
-        <div className="topActions"><span className="live"><i/> Mercado ativo</span><button className="iconBtn"><BellRing size={19}/></button><div className="avatar">RM</div></div>
+        <div className="topActions"><a href="/lab" className="labShortcut">Laboratório</a><span className="live"><i/> Mercado ativo</span><button className="iconBtn"><BellRing size={19}/></button><div className="avatar">RM</div></div>
       </header>
 
       <div className="kpis">
