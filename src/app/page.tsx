@@ -161,7 +161,7 @@ export default function Home(){
         <a href="#mercados"><BarChart3/> Mercados</a>
         <a href="/forex"><Globe2/> Forex 24h</a>
         <a href="#grafico"><CandlestickChart/> Gráficos</a>
-        <a href="#sinais"><Zap/> Sinais</a>
+        <a href="#sinais"><Zap/> Sinais</a>\n        <a href="/autotrade"><Sparkles/> AI Trade Radar</a>
         <a href="#alertas"><Bell/> Alertas</a>
         <a href="#macro"><LineChart/> Macro & Notícias</a>
         <a href="/lab"><FlaskConical/> Backtests</a>
