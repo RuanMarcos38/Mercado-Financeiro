@@ -168,6 +168,19 @@ def headers():
     if INGEST_KEY:h["x-connector-key"]=INGEST_KEY
     return h
 
+def fetch_signal(ticker):
+    try:
+        r=requests.get(SAAS_URL+"/api/connectors/analyze",params={"source":"profit","symbol":ticker,"timeframe":"1m"},timeout=20)
+        if r.ok:
+            j=r.json()
+            a=j.get("analysis") or {}
+            s=a.get("signal") or {}
+            print("SINAL",ticker,s.get("side"),"confiança",s.get("confidence"),"score",s.get("score"))
+        else:
+            print("sinal indisponível",ticker,r.status_code,r.text[:200])
+    except Exception as e:
+        print("erro ao consultar sinal",ticker,e)
+
 def push_all():
     while True:
         if ready_event.is_set():
@@ -192,6 +205,8 @@ def push_all():
                     r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
                     r.raise_for_status()
                     print("push",ticker,r.json())
+                    if os.getenv("PROFIT_FETCH_SIGNAL","1")=="1":
+                        fetch_signal(ticker)
                 except Exception as e:
                     print("push erro",ticker,e)
         time.sleep(PUSH_SECONDS)
