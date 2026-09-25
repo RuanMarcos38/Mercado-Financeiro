@@ -158,7 +158,7 @@ export default function Home(){
       </a>
       <nav className="novaNav">
         <a className="active" href="/"><LayoutDashboard/> Visão Geral</a>
-        <a href="#mercados"><BarChart3/> Mercados</a>
+        <a href="#mercados"><BarChart3/> Mercados</a>\n        <a href="/forex"><Globe2/> Forex 24h</a>
         <a href="#grafico"><CandlestickChart/> Gráficos</a>
         <a href="#sinais"><Zap/> Sinais</a>
         <a href="#alertas"><Bell/> Alertas</a>
