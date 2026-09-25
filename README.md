@@ -48,3 +48,26 @@ Acesse http://localhost:3000.
 ## Status
 
 MVP visual + motor de sinal demonstrativo. Conectores de mercado estão abstraídos para substituição por feeds reais/licenciados.
+
+
+## Modo público sem credenciais comerciais
+
+O projeto agora inclui um modo operacional que não depende de licenças B3/CME:
+
+- Banco Central do Brasil/SGS automático
+- CVM Dados Abertos automático
+- importação CSV/JSON de candles OHLCV
+- análise técnica completa
+- classificação de regime
+- COMPRA / VENDA / AGUARDAR com confiança calibrada pela qualidade da fonte
+- backtest de sinais
+- Laboratório Quantitativo em `/lab`
+
+Endpoints:
+
+- `GET /api/public/macro`
+- `GET /api/public/cvm/companies?q=petrobras`
+- `POST /api/analyze`
+- `POST /api/backtest`
+
+B3 e CME permanecem como conectores opcionais para ativação futura de streaming profissional.
