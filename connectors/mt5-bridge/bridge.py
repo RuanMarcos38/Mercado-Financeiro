@@ -55,6 +55,19 @@ def candles(symbol,tf,tf_out):
         })
     return out
 
+def fetch_signal(symbol,tf_out):
+    normalized=normalize_symbol(symbol)
+    try:
+        r=requests.get(SAAS_URL+"/api/connectors/analyze",params={"source":"mt5","symbol":normalized,"timeframe":tf_out},timeout=20)
+        if r.ok:
+            j=r.json()
+            s=(j.get("analysis") or {}).get("signal") or {}
+            print("SINAL",normalized,s.get("side"),"confiança",s.get("confidence"),"score",s.get("score"))
+        else:
+            print("sinal indisponível",normalized,r.status_code,r.text[:200])
+    except Exception as e:
+        print("erro ao consultar sinal",normalized,e)
+
 def push(symbol):
     tf,tf_out=TF.get(TIMEFRAME_NAME,TF["M5"])
     tick=mt5.symbol_info_tick(symbol)
@@ -77,6 +90,8 @@ def push(symbol):
     r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers,data=json.dumps(payload),timeout=20)
     r.raise_for_status()
     print(symbol,r.json())
+    if os.getenv("MT5_FETCH_SIGNAL","1")=="1":
+        fetch_signal(symbol,tf_out)
 
 def main():
     init()
