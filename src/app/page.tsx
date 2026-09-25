@@ -166,7 +166,7 @@ export default function Home(){
         <a href="/lab"><FlaskConical/> Backtests</a>
         <a href="#relatorios"><FileBarChart/> Relatórios</a>
         <a href="#usuarios"><Users/> Usuários</a>
-        <a href="#configuracoes"><Settings/> Configurações</a>
+        <a href="/integracoes"><Activity/> Integrações</a>\n        <a href="#configuracoes"><Settings/> Configurações</a>
       </nav>
       <div className="sidebarTrust">
         <ShieldCheck size={20}/>
