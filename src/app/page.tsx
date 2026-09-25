@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, BarChart3, Bell, BookOpen, BrainCircuit, CandlestickChart, ChevronDown,
+  Activity, BarChart3, Bell, BookOpen, BrainCircuit, CandlestickChart, ChevronDown, Globe2,
   CircleDollarSign, Clock3, FileBarChart, FlaskConical, Gauge, LayoutDashboard,
   LineChart, Search, Settings, ShieldCheck, Sparkles, TrendingDown, TrendingUp,
   Users, Zap
@@ -158,7 +158,8 @@ export default function Home(){
       </a>
       <nav className="novaNav">
         <a className="active" href="/"><LayoutDashboard/> Visão Geral</a>
-        <a href="#mercados"><BarChart3/> Mercados</a>\n        <a href="/forex"><Globe2/> Forex 24h</a>
+        <a href="#mercados"><BarChart3/> Mercados</a>
+        <a href="/forex"><Globe2/> Forex 24h</a>
         <a href="#grafico"><CandlestickChart/> Gráficos</a>
         <a href="#sinais"><Zap/> Sinais</a>
         <a href="#alertas"><Bell/> Alertas</a>
@@ -166,7 +167,8 @@ export default function Home(){
         <a href="/lab"><FlaskConical/> Backtests</a>
         <a href="#relatorios"><FileBarChart/> Relatórios</a>
         <a href="#usuarios"><Users/> Usuários</a>
-        <a href="/integracoes"><Activity/> Integrações</a>\n        <a href="#configuracoes"><Settings/> Configurações</a>
+        <a href="/integracoes"><Activity/> Integrações</a>
+        <a href="#configuracoes"><Settings/> Configurações</a>
       </nav>
       <div className="sidebarTrust">
         <ShieldCheck size={20}/>
