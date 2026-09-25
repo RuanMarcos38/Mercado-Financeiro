@@ -68,3 +68,13 @@ a{text-decoration:none;color:inherit}
 @media(max-width:680px){
   .novaShell{display:block}.novaSidebar{display:none}.novaTopbar{height:auto;padding:10px 12px}.globalSearch{width:100%}.topRight{margin-left:8px}.welcomeRow{display:block}.welcomeActions{margin-top:12px}.summaryGrid{grid-template-columns:1fr 1fr}.rightColumn{grid-template-columns:1fr}.chartToolbar{display:block}.timeframes{margin-top:10px}.novaTable{overflow-x:auto}.novaTr{min-width:720px}.lowerGrid{grid-template-columns:1fr}.resultGrid{grid-template-columns:repeat(2,1fr)}.labFormRow{grid-template-columns:1fr}.labHead{display:block}.sourceBadge{display:inline-block;margin-top:12px}
 }
+
+.realDataError{margin-bottom:12px;border:1px solid #f4cbd0;background:#fff3f5;color:#bb4350;border-radius:8px;padding:10px 12px;font-size:10px}
+.realDataLoading{margin-bottom:12px;border:1px solid #d9e7fb;background:#f4f8ff;color:#3867a9;border-radius:8px;padding:10px 12px;font-size:10px}
+.dataSourceStrip{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:white;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:12px;color:#6f7d91;font-size:8.5px}
+.dataSourceStrip b{color:#47576e}.sourceGreen,.sourceBlue{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.sourceGreen{background:var(--green)}.sourceBlue{background:var(--blue)}
+.sourcePill{display:inline-block;border-radius:999px;padding:4px 6px;font-size:6.5px;font-weight:850;white-space:nowrap}.sourcePill.delayed{background:#eef4ff;color:#3769c7}.sourcePill.official{background:#eafaf4;color:#168c66}
+.unavailableBox{margin-top:10px;border:1px dashed #d8dee8;background:#fafbfc;border-radius:8px;padding:10px}.unavailableBox>b{font-size:8.5px;color:#56657a}.unavailableBox p{font-size:7.7px;color:#7d8999;margin:5px 0 0}.unavailableBox strong{color:#3d4d63}
+.macroRealGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:11px}.macroRealGrid>div{border:1px solid var(--line);background:#fafbfd;border-radius:8px;padding:10px}.macroRealGrid span,.macroRealGrid strong,.macroRealGrid small{display:block}.macroRealGrid span{font-size:7.5px;color:var(--muted)}.macroRealGrid strong{font-size:14px;margin:5px 0 3px}.macroRealGrid small{font-size:6.5px;color:#97a1af}
+.chartEmpty{height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9aa6b6;gap:7px}.chartEmpty svg{color:#c7d1dd}.chartEmpty b{font-size:11px}.chartEmpty span{font-size:8px}
+@media(max-width:680px){.dataSourceStrip{display:grid;gap:6px}.macroRealGrid{grid-template-columns:1fr}}
