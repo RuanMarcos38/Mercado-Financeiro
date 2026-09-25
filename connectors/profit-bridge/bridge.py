@@ -181,6 +181,36 @@ def fetch_signal(ticker):
     except Exception as e:
         print("erro ao consultar sinal",ticker,e)
 
+def poll_autotrade_intent(ticker):
+    try:
+        r=requests.get(
+            SAAS_URL+"/api/autotrade/intents",
+            headers=headers(),
+            params={"source":"profit","symbol":ticker,"claim":"1"},
+            timeout=20
+        )
+        if not r.ok:return
+        intent=r.json().get("intent")
+        if not intent:return
+        mode=intent.get("mode","paper")
+        side=intent.get("side")
+        if mode=="paper":
+            note=f"Paper Profit executado: {side} {ticker} @ {intent.get('entry')}"
+            status="EXECUTED"
+            print("AUTOTRADE PAPER",ticker,side,intent.get("entry"))
+        else:
+            note="Live Profit bloqueado neste bridge: proteção atômica de stop/alvo ainda não está habilitada. Use MT5 Live ou mantenha Profit em Paper."
+            status="REJECTED"
+            print("AUTOTRADE LIVE BLOQUEADO",ticker)
+        requests.post(
+            SAAS_URL+"/api/autotrade/intents",
+            headers=headers(),
+            data=json.dumps({"id":intent["id"],"status":status,"note":note}),
+            timeout=20
+        )
+    except Exception as e:
+        print("erro AutoTrade Profit",ticker,e)
+
 def push_all():
     while True:
         if ready_event.is_set():
@@ -207,6 +237,8 @@ def push_all():
                     print("push",ticker,r.json())
                     if os.getenv("PROFIT_FETCH_SIGNAL","1")=="1":
                         fetch_signal(ticker)
+                    if os.getenv("PROFIT_FETCH_AUTOTRADE","1")=="1":
+                        poll_autotrade_intent(ticker)
                 except Exception as e:
                     print("push erro",ticker,e)
         time.sleep(PUSH_SECONDS)
