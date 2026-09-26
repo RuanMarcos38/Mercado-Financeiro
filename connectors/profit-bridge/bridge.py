@@ -14,7 +14,7 @@ DLL_PATH=os.getenv("PROFIT_DLL_PATH",r"ProfitDLL.dll")
 ACTIVATION_KEY=os.getenv("PROFIT_ACTIVATION_KEY","")
 NELOGICA_USER=os.getenv("PROFIT_USER","")
 NELOGICA_PASSWORD=os.getenv("PROFIT_PASSWORD","")
-PUSH_SECONDS=max(5,int(os.getenv("PROFIT_PUSH_SECONDS","15")))
+PUSH_SECONDS=max(1,int(os.getenv("PROFIT_PUSH_SECONDS","2")))
 TICKERS_RAW=[x.strip() for x in os.getenv("PROFIT_TICKERS","PETR4:B,VALE3:B").split(",") if x.strip()]
 
 NL_OK=0
@@ -172,7 +172,7 @@ def aggregate_from_1m(candles,minutes):
         dt=dt.replace(minute=minute,second=0,microsecond=0)
         key=dt.isoformat()
         b=buckets.setdefault(key,{
-            "symbol":c["symbol"],"timeframe":f"{minutes}m","time":key,
+            "symbol":c["symbol"],"timeframe":("1h" if minutes==60 else f"{minutes}m"),"time":key,
             "open":c["open"],"high":c["high"],"low":c["low"],"close":c["close"],
             "volume":0.0,"source":"profit"
         })
@@ -237,9 +237,9 @@ def push_all():
                 candles_1m=aggregate_1m(ticker)
                 if len(candles_1m)<2: continue
                 try:
-                    for minutes in (1,5,15):
+                    for minutes in (1,5,10,60):
                         candles=aggregate_from_1m(candles_1m,minutes)
-                        timeframe=f"{minutes}m"
+                        timeframe="1h" if minutes==60 else f"{minutes}m"
                         payload={
                             "source":"profit",
                             "symbol":ticker,
