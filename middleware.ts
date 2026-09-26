@@ -8,6 +8,7 @@ const PUBLIC_PATHS=[
   "/api/health",
   "/api/connectors/market-push",
   "/api/connectors/analyze",
+  "/api/market-mirror/push",
   "/api/autotrade/intents"
 ];
 
