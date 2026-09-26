@@ -3,6 +3,7 @@ import { ingestMarketPush,type MarketPush } from "@/lib/connectors/market-stream
 import { processStream } from "@/lib/autotrade/engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 import { getExternalMarketContext } from "@/lib/market-intelligence/external-context";
+import { notifyTenantOpportunity } from "@/lib/notifications/whatsapp";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
   const tenant=await resolveRequestTenant(req,{allowConnector:true});
@@ -19,6 +20,9 @@ export async function POST(req:NextRequest){
       meta:{...(saved.meta??{}),assetClass:body.assetClass,externalContext:external},
       newsRisk:external.newsRisk
     });
+    if(decision.ready&&decision.candidate?.status==="APTO"){
+      notifyTenantOpportunity(tenant.tenantId,decision.candidate).catch(()=>{});
+    }
     return NextResponse.json({ok:true,source:saved.source,symbol:saved.symbol,timeframe:saved.timeframe,candles:saved.candles.length,lastSeen:saved.lastSeen,external,decision});
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"Payload inválido"},{status:400});
