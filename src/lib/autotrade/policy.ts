@@ -65,8 +65,11 @@ export type TradeCandidate={
   updatedAt:string;
   ageSeconds:number;
   preAlert:boolean;
+  watch:boolean;
   readinessPct:number;
   preAlertReason?:string;
+  firstSignalAt?:string;
+  firstSignalPrice?:number;
 };
 
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -92,10 +95,13 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
   const readinessPct=side
     ?clamp(Math.round(100-((confidenceGap/Math.max(1,cfg.minConfidence))*55+(scoreGap/Math.max(1,cfg.minAbsScore))*45)*100),0,100)
     :0;
+  const watch=Boolean(side)&&hardBlocks.length===0&&confidenceGap<=15&&scoreGap<=15;
   const preAlert=Boolean(side)&&hardBlocks.length===0&&blocks.length>0&&confidenceGap<=8&&scoreGap<=8;
   const preAlertReason=preAlert
     ?`Setup se aproximando: faltam ${Math.ceil(confidenceGap)} pts de confiança e ${Math.ceil(scoreGap)} pts de score.`
-    :undefined;
+    :watch
+      ?`Movimento em formação: faltam ${Math.ceil(confidenceGap)} pts de confiança e ${Math.ceil(scoreGap)} pts de score.`
+      :undefined;
 
   const atr=Math.max(Number(i.atr??0),i.price*.0005);
   const stopDistance=atr*cfg.stopAtrMultiple;
@@ -117,6 +123,7 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
     updatedAt:new Date().toISOString(),
     ageSeconds:Math.max(0,Math.round(i.sourceAgeSeconds??0)),
     preAlert,
+    watch,
     readinessPct,
     preAlertReason
   };
