@@ -4,6 +4,7 @@ import { analyzeForex } from "@/lib/forex/engine";
 import { analyzeCandles } from "@/lib/analysis-engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 import { getCandidates } from "@/lib/autotrade/store";
+import { getVerifiedPerformance } from "@/lib/performance/verified";
 
 export const dynamic="force-dynamic";
 
@@ -71,6 +72,8 @@ export async function GET(req:NextRequest){
       updatedAt:candidate.updatedAt
     }:null;
 
+    const verifiedPerformance=getVerifiedPerformance(symbol,timeframe,stream.source);
+
     return NextResponse.json({
       ready:true,
       source:stream.source,
@@ -82,6 +85,7 @@ export async function GET(req:NextRequest){
       candidate,
       decision,
       mandatoryAnalysisComplete:Boolean(decision&&decision.indicatorsEvaluated>=21),
+      verifiedPerformance,
       externalContext:stream.meta?.externalContext??null,
       analysis
     });
