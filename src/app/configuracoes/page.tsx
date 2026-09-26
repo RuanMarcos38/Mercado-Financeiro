@@ -14,12 +14,12 @@ export default function ConfiguracoesPage(){
     <section className="settingsGrid">
       <article className="settingsCard"><User/><span>Usuário</span><strong>{me?.displayName||"—"}</strong><small>{me?.email||"—"}</small></article>
       <article className="settingsCard"><Building2/><span>Empresa</span><strong>{me?.tenantName||"—"}</strong><small>Ambiente isolado por tenant</small></article>
-      <article className="settingsCard"><ShieldCheck/><span>Perfil</span><strong>{me?.role?.toUpperCase()||"—"}</strong><small>Permissões de acesso</small></article>
+      <article className="settingsCard"><ShieldCheck/><span>Perfil</span><strong>{me?.role?({owner:"PROPRIETÁRIO",admin:"ADMINISTRADOR",trader:"OPERADOR",viewer:"VISUALIZADOR"} as Record<string,string>)[me.role]??me.role.toUpperCase():"—"}</strong><small>Permissões de acesso</small></article>
     </section>
     <section className="settingsActions">
       <a href="/usuarios"><Users/> Gerenciar usuários</a>
       <a href="/integracoes"><KeyRound/> Gerenciar integrações MT5/Profit</a>
-      <a href="/autotrade"><ShieldCheck/> Configurar Radar e AutoTrade</a><a href="/alertas"><Bell/> Alertas e WhatsApp</a>
+      <a href="/autotrade"><ShieldCheck/> Configurar Radar e Operações</a><a href="/alertas"><Bell/> Alertas e WhatsApp</a>
     </section>
   </main>;
 }
