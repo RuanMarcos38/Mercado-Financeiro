@@ -56,12 +56,14 @@ export async function POST(req:NextRequest){
       });
       if(legacyError)throw new Error(membershipError?.message??legacyError.message);
     }else{
-      await admin.from("profiles").upsert({
-        id:userData.user.id,
-        tenant_id:tenant.id,
-        role:"admin",
-        display_name:ownerName
-      }).then(()=>{}).catch(()=>{});
+      try{
+        await admin.from("profiles").upsert({
+          id:userData.user.id,
+          tenant_id:tenant.id,
+          role:"admin",
+          display_name:ownerName
+        });
+      }catch{}
     }
 
     try{
