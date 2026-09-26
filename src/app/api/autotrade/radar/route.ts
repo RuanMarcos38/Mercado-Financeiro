@@ -30,6 +30,29 @@ export async function GET(){
 
   const cfg=getAutoTradeConfig();
   const candidates=getCandidates();
+
+  const groups=new Map<string,typeof candidates>();
+  for(const c of candidates){
+    const k=c.source+":"+c.symbol;
+    groups.set(k,[...(groups.get(k)??[]),c]);
+  }
+  const consensus=[...groups.entries()].map(([key,items])=>{
+    const buy=items.filter(x=>x.status==="APTO"&&x.side==="BUY");
+    const sell=items.filter(x=>x.status==="APTO"&&x.side==="SELL");
+    const direction=buy.length>sell.length?"BUY":sell.length>buy.length?"SELL":"WAIT";
+    const selected=direction==="BUY"?buy:direction==="SELL"?sell:[];
+    return {
+      key,
+      source:items[0]?.source,
+      symbol:items[0]?.symbol,
+      direction,
+      confirmations:selected.length,
+      timeframes:items.map(x=>x.timeframe),
+      confidence:selected.length?Math.round(selected.reduce((a,b)=>a+b.confidence,0)/selected.length):0,
+      ready:selected.length>=Math.min(2,items.length)
+    };
+  }).sort((a,b)=>Number(b.ready)-Number(a.ready)||b.confidence-a.confidence);
+
   return NextResponse.json({
     generatedAt:new Date().toISOString(),
     mode:cfg.mode,
@@ -37,6 +60,7 @@ export async function GET(){
     total:candidates.length,
     aptos:candidates.filter(x=>x.status==="APTO").length,
     candidates,
+    consensus,
     warmup,
     streams:streams.length
   });
