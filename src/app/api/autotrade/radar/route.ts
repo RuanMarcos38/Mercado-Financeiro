@@ -3,6 +3,7 @@ import { listMarketStreams,getBestMarketStream } from "@/lib/connectors/market-s
 import { getAutoTradeConfig,getCandidates,setCandidates } from "@/lib/autotrade/store";
 import { processStream } from "@/lib/autotrade/engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
+import { MARKET_ANALYSIS_MAX_AGE_SECONDS } from "@/lib/market-intelligence/cadence";
 
 export const dynamic="force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(req:NextRequest){
 
   const now=Date.now();
   const allStreams=listMarketStreams(tenant.tenantId);
-  const activeStreams=allStreams.filter(s=>(now-new Date(s.lastSeen).getTime())<=90000);
+  const activeStreams=allStreams.filter(s=>(now-new Date(s.lastSeen).getTime())<=MARKET_ANALYSIS_MAX_AGE_SECONDS*1000);
   const warmup:any[]=[];
   const activeKeys=new Set<string>();
 
