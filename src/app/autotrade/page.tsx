@@ -9,7 +9,7 @@ type Candidate={
   reasons:string[];blocks:string[];validForSeconds:number;
 };
 type Radar={generatedAt:string;mode:string;liveAllowed:boolean;total:number;aptos:number;bloqueados?:number;aguardando?:number;streams?:number;staleStreams?:number;candidates:Candidate[];intentsCreated?:number};
-type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsPontuação:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;canEdit?:boolean;role?:string;note?:string};
+type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsScore:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;canEdit?:boolean;role?:string;note?:string};
 
 async function readJsonSafe(response:Response){
   const text=await response.text();
@@ -50,7 +50,7 @@ export default function AutoTradePage(){
         }
       }
       setRadar(rj);setCfg(cj);setError("");
-    }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar AutoTrade");}
+    }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar o radar");}
   }
 
   useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id);},[]);
@@ -86,20 +86,20 @@ export default function AutoTradePage(){
     {error&&<div className="realDataError"><b>Atenção:</b> {error}</div>}
 
     <section className="autoTopGrid">
-      <article className="autoSituaçãoCard">
-        <div className="autoSituaçãoHead"><Zap/><span>Oportunidades aptas</span></div>
+      <article className="autoStatusCard">
+        <div className="autoStatusHead"><Zap/><span>Oportunidades aptas</span></div>
         <strong>{radar?.aptos??0}</strong><small>de {radar?.total??0} fluxos analisados</small>
       </article>
-      <article className="autoSituaçãoCard">
-        <div className="autoSituaçãoHead"><Activity/><span>Modo atual</span></div>
+      <article className="autoStatusCard">
+        <div className="autoStatusHead"><Activity/><span>Modo atual</span></div>
         <strong className={"modeText "+(cfg?.mode??"off")}>{cfg?.mode==="live"?"REAL":cfg?.mode==="paper"?"SIMULAÇÃO":"DESLIGADO"}</strong><small>{cfg?.mode==="live"?"ordens reais habilitadas":cfg?.mode==="paper"?"simulação automática":"somente análise e alertas"}</small>
       </article>
-      <article className="autoSituaçãoCard">
-        <div className="autoSituaçãoHead"><ShieldCheck/><span>Confiança mínima</span></div>
+      <article className="autoStatusCard">
+        <div className="autoStatusHead"><ShieldCheck/><span>Confiança mínima</span></div>
         <strong>{cfg?.minConfidence??72}%</strong><small>abaixo disso nenhuma ordem é criada</small>
       </article>
-      <article className="autoSituaçãoCard">
-        <div className="autoSituaçãoHead"><Bell/><span>Alertas</span></div>
+      <article className="autoStatusCard">
+        <div className="autoStatusHead"><Bell/><span>Alertas</span></div>
         <strong>5s</strong><small>atualização visual contínua</small>
       </article>
     </section>
@@ -116,7 +116,7 @@ export default function AutoTradePage(){
 
         <div className="riskGrid">
           <label>Confiança mínima<input type="number" value={cfg?.minConfidence??72} onChange={e=>setCfg(v=>v?{...v,minConfidence:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({minConfidence:cfg.minConfidence})}/><span>%</span></label>
-          <label>Pontuação mínimo<input type="number" value={cfg?.minAbsPontuação??48} onChange={e=>setCfg(v=>v?{...v,minAbsPontuação:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({minAbsPontuação:cfg.minAbsPontuação})}/></label>
+          <label>Pontuação mínimo<input type="number" value={cfg?.minAbsScore??48} onChange={e=>setCfg(v=>v?{...v,minAbsScore:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({minAbsScore:cfg.minAbsScore})}/></label>
           <label>Risco por operação<input type="number" step=".1" value={cfg?.riskPerTradePct??.5} onChange={e=>setCfg(v=>v?{...v,riskPerTradePct:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({riskPerTradePct:cfg.riskPerTradePct})}/><span>%</span></label>
           <label>Perda diária máx.<input type="number" step=".1" value={cfg?.dailyLossLimitPct??2} onChange={e=>setCfg(v=>v?{...v,dailyLossLimitPct:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({dailyLossLimitPct:cfg.dailyLossLimitPct})}/><span>%</span></label>
           <label>Máx. posições<input type="number" value={cfg?.maxOpenPositions??2} onChange={e=>setCfg(v=>v?{...v,maxOpenPositions:Number(e.target.value)}:v)} onBlur={()=>cfg&&save({maxOpenPositions:cfg.maxOpenPositions})}/></label>
