@@ -169,10 +169,10 @@ export default function Home(){
         <a href="/forex"><Globe2/> Forex 24h</a>
         <a href="#grafico"><CandlestickChart/> Gráficos</a>
         <a href="#sinais"><Zap/> Sinais</a>
-        <a href="/autotrade"><Sparkles/> AI Trade Radar</a>
+        <a href="/autotrade"><Sparkles/> Radar de IA</a>
         <a href="#alertas"><Bell/> Alertas</a>
         <a href="#macro"><LineChart/> Macro & Notícias</a>
-        <a href="/lab"><FlaskConical/> Backtests</a>
+        <a href="/lab"><FlaskConical/> Testes Históricos</a>
         <a href="#relatorios"><FileBarChart/> Relatórios</a>
         <a href="/usuarios"><Users/> Usuários</a>
         <a href="/integracoes"><Activity/> Integrações</a>
