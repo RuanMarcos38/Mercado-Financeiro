@@ -37,6 +37,9 @@ FOREX_CATALOG_AT=0
 WATCHLIST_CACHE=[]
 WATCHLIST_AT=0
 FULL_SCAN_CURSOR=0
+FULL_SCAN_QUEUE=[]
+FULL_SCAN_QUEUE_AT=0
+CATALOG_SENT_AT=0
 
 TF={
     "M1":(mt5.TIMEFRAME_M1,"1m"),
@@ -79,6 +82,7 @@ def init():
     print("MT5 conectado:",bool(info))
     print("Conta:",acct.login if acct else None,"Servidor:",acct.server if acct else None,"AutoTrade local:",AUTOTRADE_LIVE)
     discover_forex_catalog(force=True)
+    build_full_scan_queue(force=True)
 
 def ensure_connection():
     info=mt5.terminal_info()
@@ -176,19 +180,28 @@ def tf_name_from_output(tf_out):
     reverse={"1m":"M1","5m":"M5","10m":"M10","15m":"M15","1h":"H1","1d":"D1"}
     return reverse.get(tf_out,"M5")
 
-def build_full_scan_queue():
+def build_full_scan_queue(force=False):
+    global FULL_SCAN_QUEUE,FULL_SCAN_QUEUE_AT
     if not STREAM_ALL_FOREX:
         return []
+    now=time.time()
+    if FULL_SCAN_QUEUE and not force and now-FULL_SCAN_QUEUE_AT<300:
+        return FULL_SCAN_QUEUE
     queue=[]
-    for item in discover_forex_catalog():
+    selected=0
+    for item in discover_forex_catalog(force=force):
         broker_symbol=item.get("brokerSymbol")
         pair=item.get("symbol")
         if not broker_symbol or not pair:
             continue
         if not mt5.symbol_select(broker_symbol,True):
             continue
+        selected+=1
         for tf_name in ["M1","M5","M10","H1"]:
             queue.append((pair,broker_symbol,tf_name))
+    FULL_SCAN_QUEUE=queue
+    FULL_SCAN_QUEUE_AT=now
+    print("FOREX FILA TOTAL",selected,"pares",len(queue),"streams")
     return queue
 
 def background_cycle_budget(total):
@@ -197,23 +210,28 @@ def background_cycle_budget(total):
     return max(1,min(BATCH_MAX,math.ceil(total/cycles)))
 
 def make_payload(symbol,tf_name,background=False):
+    global CATALOG_SENT_AT
     tick=mt5.symbol_info_tick(symbol)
     if tick is None:
         raise RuntimeError(f"{symbol}: sem tick")
     tf,tf_out=TF.get(tf_name,TF["M5"])
     normalized=normalize_symbol(symbol)
     candles_out=candles(symbol,tf,tf_out,BARS if (symbol,tf_out) not in WARMED_STREAMS else 3)
+    meta={
+        "terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex",
+        "autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name,
+        "backgroundScan":bool(background)
+    }
+    now=time.time()
+    if now-CATALOG_SENT_AT>=300:
+        meta["availableForexPairs"]=discover_forex_catalog()
+        CATALOG_SENT_AT=now
     payload={
         "source":"mt5","symbol":normalized,"assetClass":"forex","timeframe":tf_out,
         "timestamp":datetime.now(timezone.utc).isoformat(),
         "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
         "candles":candles_out,
-        "meta":{
-            "terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex",
-            "autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name,
-            "availableForexPairs":discover_forex_catalog(),
-            "backgroundScan":bool(background)
-        }
+        "meta":meta
     }
     WARMED_STREAMS.add((symbol,tf_out))
     return payload
