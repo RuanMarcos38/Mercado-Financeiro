@@ -42,14 +42,16 @@ export default function ForexPage(){
         if(r.ok&&j.ready!==false){
           setLive(j);setError("");
           const c=j.candidate;
-          if((c?.status==="APTO"||c?.preAlert)&&(c.side==="BUY"||c.side==="SELL")){
-            const key=[j.symbol,j.timeframe,c.side,c.score,c.entry].join(":");
+          if((c?.status==="APTO"||c?.preAlert||c?.watch)&&(c.side==="BUY"||c.side==="SELL")){
+            const stage=c.status==="APTO"?"APTO":c.preAlert?"PRÉ-ALERTA":"MONITORAR";
+            const key=[j.symbol,j.timeframe,c.side,stage,c.firstSignalAt??""].join(":");
             if(lastAlert.current!==key){
               lastAlert.current=key;
               if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
-                new Notification((c.preAlert?"MercadoAI — PRÉ-ALERTA ":"MercadoAI — ")+(c.side==="BUY"?"COMPRA ":"VENDA ")+j.symbol,{
-                  body:j.timeframe+" · confiança "+c.confidence+"% · entrada "+c.entry+(c.preAlert?" · aguardando confirmação final":"")
-                });
+                new Notification(
+                  "MercadoAI — "+stage+" "+(c.side==="BUY"?"COMPRA ":"VENDA ")+j.symbol,
+                  {body:j.timeframe+" · prontidão "+(c.readinessPct??0)+"% · confiança "+c.confidence+"% · referência "+c.entry}
+                );
               }
               if(soundEnabled){
                 try{
@@ -58,7 +60,7 @@ export default function ForexPage(){
                   const osc=ctx.createOscillator();
                   const gain=ctx.createGain();
                   osc.type="sine";
-                  osc.frequency.value=c.preAlert?620:(c.side==="BUY"?880:520);
+                  osc.frequency.value=c.status==="APTO"?(c.side==="BUY"?880:520):c.preAlert?650:430;
                   gain.gain.setValueAtTime(.0001,ctx.currentTime);
                   gain.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.02);
                   gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.28);
@@ -145,7 +147,13 @@ export default function ForexPage(){
       </article>
 
       <aside className="fxPanel signalConsole">
-        <div className="signalHeadline">{live?.candidate?.preAlert&&<span className="preAlertBadge">PRÉ-ALERTA · {live.candidate.readinessPct}%</span>}<div className={"bigSignal "+signal.toLowerCase()}>{signal}</div></div>
+        <div className="signalHeadline">
+          {(live?.candidate?.watch||live?.candidate?.preAlert)&&live?.candidate?.status!=="APTO"&&
+            <span className="preAlertBadge">
+              {live?.candidate?.preAlert?"PRÉ-ALERTA":"MONITORAR"} · {live?.candidate?.readinessPct??0}%
+            </span>}
+          <div className={"bigSignal "+signal.toLowerCase()}>{signal}</div>
+        </div>
         <div className="signalConfidence"><span>Confiança</span><strong>{confidence}%</strong></div>
         <div className="signalLevels">
           <div><span>Entrada</span><b>{live?.candidate?.entry??"—"}</b></div>
@@ -153,7 +161,12 @@ export default function ForexPage(){
           <div><span>Alvo</span><b>{live?.candidate?.takeProfit??"—"}</b></div>
           <div><span>Risco</span><b>{live?.analysis?.signal?.risk??"—"}</b></div>
         </div>
-        <div className="signalStatus"><ShieldCheck size={15}/><div><b>{live?.candidate?.preAlert?"PRÉ-ALERTA":(live?.candidate?.status??"AGUARDAR")}</b><span>{live?.candidate?.preAlert?(live?.candidate?.preAlertReason??"Setup próximo da validação final."):
+        <div className="signalStatus"><ShieldCheck size={15}/><div><b>{
+  live?.candidate?.status==="APTO"?"APTO":
+  live?.candidate?.preAlert?"PRÉ-ALERTA":
+  live?.candidate?.watch?"MONITORAR":
+  (live?.candidate?.status??"AGUARDAR")
+}</b><span>{(live?.candidate?.preAlert||live?.candidate?.watch)?(live?.candidate?.preAlertReason??"Movimento em formação."):
 
   live?.candidate?.status==="APTO"
     ?"Confluência aprovada pelo motor."
