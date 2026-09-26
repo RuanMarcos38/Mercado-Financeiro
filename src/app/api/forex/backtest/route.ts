@@ -5,6 +5,7 @@ import { getOandaCandles,getTwelveDataCandles } from "@/lib/forex/providers";
 import { backtestForex } from "@/lib/forex/backtest";
 import { getMarketStream } from "@/lib/connectors/market-stream";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
+import { recordVerifiedPerformance } from "@/lib/performance/verified";
 
 function hasCsvData(csv:unknown){
   return typeof csv==="string"&&csv.trim().split(/\r?\n/).filter(Boolean).length>1;
@@ -41,7 +42,13 @@ export async function POST(req:NextRequest){
     else if(provider==="import"&&hasCsvData(body.csv))candles=parseCandlesCsv(body.csv,pair,timeframe);
     else return NextResponse.json({ok:true,ready:false,status:"CSV_EMPTY",pair,timeframe,provider,message:"Cole candles reais para executar o backtest."});
 
-    return NextResponse.json({ok:true,ready:true,pair,timeframe,provider,candles:candles.length,...backtestForex(candles,{lookback:body.lookback,horizon:body.horizon,costBps:body.costBps})});
+    const result=backtestForex(candles,{lookback:body.lookback,horizon:body.horizon,costBps:body.costBps});
+    const verified=recordVerifiedPerformance({
+      symbol:pair,timeframe,provider,
+      signals:result.signals,winRate:result.winRate,
+      profitFactor:result.profitFactor,maxDrawdownPct:result.maxDrawdownPct
+    });
+    return NextResponse.json({ok:true,ready:true,pair,timeframe,provider,candles:candles.length,...result,verifiedPerformance:verified});
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"Falha no backtest Forex"},{status:400});
   }
