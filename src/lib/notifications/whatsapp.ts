@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { TradeCandidate } from "@/lib/autotrade/policy";
+import { getRedisNotificationPreferences } from "@/lib/notifications/preferences-store";
 
 const g=globalThis as typeof globalThis & { __waSignalDedup?:Map<string,number> };
 if(!g.__waSignalDedup)g.__waSignalDedup=new Map();
@@ -69,7 +70,11 @@ export async function notifyTenantOpportunity(tenantId:string,o:AlertOpportunity
       minConfidence=Number(data.min_confidence??minConfidence);
     }
   }catch{
-    // fallback para variável de ambiente da implantação
+    const redisPref=await getRedisNotificationPreferences(tenantId);
+    if(redisPref?.whatsapp_enabled&&redisPref.whatsapp_e164){
+      to=String(redisPref.whatsapp_e164).replace(/\D/g,"");
+      minConfidence=Number(redisPref.min_confidence??minConfidence);
+    }
   }
 
   if(!to||o.confidence<minConfidence)return false;
