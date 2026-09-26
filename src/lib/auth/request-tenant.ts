@@ -30,7 +30,7 @@ export async function resolveRequestTenant(req:NextRequest,opts?:{allowConnector
         // Compatibilidade: segue para chave temporária/legada.
       }
 
-      const fallback=resolveFallbackConnectorKey(key);
+      const fallback=await resolveFallbackConnectorKey(key);
       if(fallback){
         return {tenantId:fallback.tenantId,via:"fallback" as const};
       }
