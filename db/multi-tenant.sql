@@ -25,17 +25,7 @@ alter table tenant_audit_log enable row level security;
 -- Usuários autenticados só enxergam memberships dos tenants aos quais pertencem.
 drop policy if exists memberships_read_own_tenant on tenant_memberships;
 create policy memberships_read_own_tenant on tenant_memberships
-for select using (
-  user_id = auth.uid()
-  or tenant_id in (
-    select tm.tenant_id from tenant_memberships tm where tm.user_id = auth.uid() and tm.active = true
-  )
-);
+for select using (user_id = auth.uid());
 
+-- O log é lido apenas pelo backend administrativo/service role.
 drop policy if exists tenant_audit_read_own_tenant on tenant_audit_log;
-create policy tenant_audit_read_own_tenant on tenant_audit_log
-for select using (
-  tenant_id in (
-    select tm.tenant_id from tenant_memberships tm where tm.user_id = auth.uid() and tm.active = true
-  )
-);
