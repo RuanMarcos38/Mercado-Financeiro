@@ -25,3 +25,18 @@ export async function saveRedisNotificationPreferences(p:NotificationPreferences
   });
   return Boolean(ok);
 }
+
+
+const mem=globalThis as typeof globalThis & {
+  __notificationPreferencesMemory?:Map<string,NotificationPreferences>;
+};
+if(!mem.__notificationPreferencesMemory)mem.__notificationPreferencesMemory=new Map();
+
+export function getMemoryNotificationPreferences(tenantId:string){
+  return mem.__notificationPreferencesMemory!.get(tenantId)??null;
+}
+
+export function saveMemoryNotificationPreferences(p:NotificationPreferences){
+  mem.__notificationPreferencesMemory!.set(p.tenant_id,p);
+  return true;
+}
