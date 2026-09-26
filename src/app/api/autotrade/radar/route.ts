@@ -5,6 +5,7 @@ import { processStream } from "@/lib/autotrade/engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 export const dynamic="force-dynamic";
 export async function GET(req:NextRequest){
+ try{
   const tenant=await resolveRequestTenant(req);
   if(!tenant)return NextResponse.json({error:"Não autenticado"},{status:401});
   const streams=listMarketStreams(tenant.tenantId);
@@ -27,4 +28,7 @@ export async function GET(req:NextRequest){
     return {key,source:items[0]?.source,symbol:items[0]?.symbol,direction,confirmations:selected.length,timeframes:items.map(x=>x.timeframe),confidence:selected.length?Math.round(selected.reduce((a,b)=>a+b.confidence,0)/selected.length):0,ready:selected.length>=Math.min(2,items.length)};
   }).sort((a,b)=>Number(b.ready)-Number(a.ready)||b.confidence-a.confidence);
   return NextResponse.json({generatedAt:new Date().toISOString(),mode:cfg.mode,liveAllowed:process.env.AUTOTRADE_LIVE_ENABLED==="true",total:candidates.length,aptos:candidates.filter(x=>x.status==="APTO").length,candidates,consensus,warmup,streams:streams.length});
+ }catch(error){
+  return NextResponse.json({error:error instanceof Error?error.message:"Falha ao carregar Radar"},{status:500});
+ }
 }
