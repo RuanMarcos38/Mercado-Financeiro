@@ -11,6 +11,9 @@ type SignalOverlay={
   stopLoss?:number;
   takeProfit?:number;
   preAlert?:boolean;
+  watch?:boolean;
+  firstSignalAt?:string;
+  firstSignalPrice?:number;
 };
 
 type HoverCandle={
@@ -218,16 +221,26 @@ export default function LiveCandleChart({candles,signal}:{candles:Candle[];signa
     const last=candles.at(-1);
     const createMarkers=(lib as any).createSeriesMarkers;
     if(createMarkers){
-      const markers=last&&signal?.side?[{
-        time:Math.floor(new Date(last.time).getTime()/1000) as any,
+      const markerTime=signal?.firstSignalAt
+        ?Math.floor(new Date(signal.firstSignalAt).getTime()/1000)
+        :(last?Math.floor(new Date(last.time).getTime()/1000):null);
+      const label=signal?.status==="APTO"
+        ?(signal.side==="BUY"?"COMPRA":"VENDA")
+        :signal?.preAlert
+          ?("PRÉ "+(signal.side==="BUY"?"COMPRA":"VENDA"))
+          :signal?.watch
+            ?("MONITORAR "+(signal.side==="BUY"?"COMPRA":"VENDA"))
+            :"";
+      const markers=markerTime&&signal?.side&&label?[{
+        time:markerTime as any,
         position:signal.side==="BUY"?"belowBar":"aboveBar",
         color:signal.side==="BUY"?"#168c66":"#d74b58",
         shape:signal.side==="BUY"?"arrowUp":"arrowDown",
-        text:(signal.preAlert?"PRÉ ":"")+(signal.side==="BUY"?"COMPRA":"VENDA")
+        text:label
       }]:[];
       createMarkers(series,markers);
     }
-  },[candles,levelsVisible,signal?.side,signal?.status,signal?.entry,signal?.stopLoss,signal?.takeProfit,signal?.preAlert]);
+  },[candles,levelsVisible,signal?.side,signal?.status,signal?.entry,signal?.stopLoss,signal?.takeProfit,signal?.preAlert,signal?.watch,signal?.firstSignalAt,signal?.firstSignalPrice]);
 
   const last=candles.at(-1);
   const display=hover??(last?{
