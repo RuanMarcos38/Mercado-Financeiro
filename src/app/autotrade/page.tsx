@@ -8,7 +8,7 @@ type Candidate={
   confidence:number;score:number;entry:number;stopLoss?:number;takeProfit?:number;rr?:number;
   reasons:string[];blocks:string[];validForSeconds:number;
 };
-type Radar={generatedAt:string;mode:string;liveAllowed:boolean;total:number;aptos:number;candidates:Candidate[];intentsCreated:number};
+type Radar={generatedAt:string;mode:string;liveAllowed:boolean;total:number;aptos:number;bloqueados?:number;aguardando?:number;streams?:number;staleStreams?:number;candidates:Candidate[];intentsCreated?:number};
 type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsScore:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;canEdit?:boolean;role?:string;note?:string};
 
 async function readJsonSafe(response:Response){
@@ -53,7 +53,7 @@ export default function AutoTradePage(){
     }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar AutoTrade");}
   }
 
-  useEffect(()=>{load();const id=setInterval(load,15000);return()=>clearInterval(id);},[]);
+  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id);},[]);
 
   async function enableNotifications(){
     if(typeof Notification==="undefined"){setError("Este navegador não suporta notificações.");return;}
@@ -100,7 +100,7 @@ export default function AutoTradePage(){
       </article>
       <article className="autoStatusCard">
         <div className="autoStatusHead"><Bell/><span>Alertas</span></div>
-        <strong>15s</strong><small>radar recalculado continuamente nesta tela</small>
+        <strong>5s</strong><small>sincronização visual; o motor analisa a cada push do feed</small>
       </article>
     </section>
 
@@ -142,8 +142,8 @@ export default function AutoTradePage(){
     <section className="autoPanel">
       <div className="fxPanelHead"><div><h2>Radar de oportunidades</h2><p>Somente APTOS podem gerar intenção automática de ordem.</p></div><Bell size={18}/></div>
       <div className="autoTable">
-        <div className="autoTr autoTh"><span>Status</span><span>Fonte</span><span>Ativo</span><span>TF</span><span>Direção</span><span>Conf.</span><span>Score</span><span>Entrada</span><span>Stop</span><span>Alvo</span></div>
-        {(radar?.candidates??[]).map(c=><div className="autoTr" key={c.source+c.symbol+c.timeframe}>
+        <div className="autoTr autoTh autoTrReason"><span>Status</span><span>Fonte</span><span>Ativo</span><span>TF</span><span>Direção</span><span>Conf.</span><span>Score</span><span>Entrada</span><span>Stop</span><span>Alvo</span><span>Motivo</span></div>
+        {(radar?.candidates??[]).map(c=><div className="autoTr autoTrReason" key={c.source+c.symbol+c.timeframe}>
           <span><em className={"aptBadge "+c.status.toLowerCase()}>{c.status}</em></span>
           <span>{c.source.toUpperCase()}</span>
           <span><b>{c.symbol}</b></span>
@@ -154,6 +154,7 @@ export default function AutoTradePage(){
           <span>{c.entry?.toFixed(5)}</span>
           <span>{c.stopLoss?.toFixed(5)??"—"}</span>
           <span>{c.takeProfit?.toFixed(5)??"—"}</span>
+          <span className="candidateReason">{c.status==="BLOQUEADO"?(c.blocks?.[0]??"Regra de segurança"):(c.status==="AGUARDAR"?"Sem direção confirmada":"Confluência aprovada")}</span>
         </div>)}
         {!radar?.candidates?.length&&<div className="integrationEmpty"><Activity/><b>Nenhum stream elegível ainda.</b><span>Conecte MT5/Profit para o radar analisar dados em tempo real.</span></div>}
       </div>
