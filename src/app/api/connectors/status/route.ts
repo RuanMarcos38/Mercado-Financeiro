@@ -1,10 +1,12 @@
 import { NextRequest,NextResponse } from "next/server";
 import { connectorStoreWarning,listMarketStreams } from "@/lib/connectors/market-stream";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
+import { hydrateSharedMarketStreams } from "@/lib/connectors/shared-streams";
 export const dynamic="force-dynamic";
 export async function GET(req:NextRequest){
   const tenant=await resolveRequestTenant(req);
   if(!tenant)return NextResponse.json({error:"Não autenticado"},{status:401});
+  await hydrateSharedMarketStreams(tenant.tenantId);
   const streams=listMarketStreams(tenant.tenantId);
   const now=Date.now();
   return NextResponse.json({
