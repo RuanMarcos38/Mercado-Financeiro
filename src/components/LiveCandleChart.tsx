@@ -83,9 +83,10 @@ export default function LiveCandleChart({candles,signal}:{candles:Candle[];signa
       if(disposed||!hostRef.current)return;
       libRef.current=lib;
 
+      const responsiveHeight=(width:number)=>width<=520?300:width<=900?360:420;
       const chart=lib.createChart(hostRef.current,{
         width:hostRef.current.clientWidth,
-        height:420,
+        height:responsiveHeight(hostRef.current.clientWidth),
         layout:{background:{type:lib.ColorType.Solid,color:"#ffffff"},textColor:"#65758b"},
         grid:{
           vertLines:{color:"#eef2f7",visible:true},
@@ -147,7 +148,10 @@ export default function LiveCandleChart({candles,signal}:{candles:Candle[];signa
       });
 
       ro=new ResizeObserver(()=>{
-        if(hostRef.current&&chart)chart.applyOptions({width:hostRef.current.clientWidth});
+        if(hostRef.current&&chart){
+          const width=hostRef.current.clientWidth;
+          chart.applyOptions({width,height:responsiveHeight(width)});
+        }
       });
       ro.observe(hostRef.current);
     })();
