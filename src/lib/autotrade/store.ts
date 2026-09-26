@@ -19,36 +19,50 @@ export type ExecutionIntent={
 };
 
 type Audit={time:string;type:string;message:string;data?:unknown};
+type TenantState={
+  config:AutoTradeConfig;
+  intents:ExecutionIntent[];
+  audit:Audit[];
+  candidates:TradeCandidate[];
+};
 
 const g=globalThis as typeof globalThis & {
-  __autoTradeConfig?:AutoTradeConfig;
-  __executionIntents?:ExecutionIntent[];
-  __autoTradeAudit?:Audit[];
-  __candidateCache?:TradeCandidate[];
+  __tenantAutoTrade?:Map<string,TenantState>;
 };
-if(!g.__autoTradeConfig) g.__autoTradeConfig={...DEFAULT_AUTOTRADE_CONFIG};
-if(!g.__executionIntents) g.__executionIntents=[];
-if(!g.__autoTradeAudit) g.__autoTradeAudit=[];
-if(!g.__candidateCache) g.__candidateCache=[];
+if(!g.__tenantAutoTrade)g.__tenantAutoTrade=new Map();
 
-export function getAutoTradeConfig(){return g.__autoTradeConfig!;}
-export function setAutoTradeConfig(patch:Partial<AutoTradeConfig>){
-  g.__autoTradeConfig={...g.__autoTradeConfig!,...patch};
-  audit("CONFIG","Configuração AutoTrade atualizada",g.__autoTradeConfig);
-  return g.__autoTradeConfig;
+function state(tenantId:string){
+  let s=g.__tenantAutoTrade!.get(tenantId);
+  if(!s){
+    s={config:{...DEFAULT_AUTOTRADE_CONFIG},intents:[],audit:[],candidates:[]};
+    g.__tenantAutoTrade!.set(tenantId,s);
+  }
+  return s;
 }
-export function setCandidates(c:TradeCandidate[]){g.__candidateCache=c;return c;}
-export function getCandidates(){return g.__candidateCache??[];}
-export function audit(type:string,message:string,data?:unknown){
-  g.__autoTradeAudit!.unshift({time:new Date().toISOString(),type,message,data});
-  g.__autoTradeAudit=g.__autoTradeAudit!.slice(0,500);
+
+export function getAutoTradeConfig(tenantId:string){return state(tenantId).config;}
+export function setAutoTradeConfig(tenantId:string,patch:Partial<AutoTradeConfig>){
+  const s=state(tenantId);
+  s.config={...s.config,...patch};
+  audit(tenantId,"CONFIG","Configuração AutoTrade atualizada",s.config);
+  return s.config;
 }
-export function getAudit(){return g.__autoTradeAudit??[];}
-export function enqueueIntent(candidate:TradeCandidate,mode:"paper"|"live"){
-  if(candidate.status!=="APTO"||!candidate.side) throw new Error("Candidato não está apto.");
+export function setCandidates(tenantId:string,c:TradeCandidate[]){state(tenantId).candidates=c;return c;}
+export function getCandidates(tenantId:string){return state(tenantId).candidates;}
+export function audit(tenantId:string,type:string,message:string,data?:unknown){
+  const s=state(tenantId);
+  s.audit.unshift({time:new Date().toISOString(),type,message,data});
+  s.audit=s.audit.slice(0,500);
+}
+export function getAudit(tenantId:string){return state(tenantId).audit;}
+
+export function enqueueIntent(tenantId:string,candidate:TradeCandidate,mode:"paper"|"live"){
+  if(candidate.status!=="APTO"||!candidate.side)throw new Error("Candidato não está apto.");
+  const s=state(tenantId);
   const now=Date.now();
-  const existing=g.__executionIntents!.find(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe&&["PENDING","CLAIMED"].includes(x.status)&&new Date(x.expiresAt).getTime()>now);
+  const existing=s.intents.find(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe&&["PENDING","CLAIMED"].includes(x.status)&&new Date(x.expiresAt).getTime()>now);
   if(existing)return existing;
+
   const intent:ExecutionIntent={
     id:crypto.randomUUID(),
     createdAt:new Date(now).toISOString(),
@@ -57,43 +71,44 @@ export function enqueueIntent(candidate:TradeCandidate,mode:"paper"|"live"){
     side:candidate.side,mode,entry:candidate.entry,stopLoss:candidate.stopLoss,takeProfit:candidate.takeProfit,
     confidence:candidate.confidence,score:candidate.score,status:"PENDING"
   };
-  g.__executionIntents!.unshift(intent);
-  g.__executionIntents=g.__executionIntents!.slice(0,500);
-  audit("INTENT","Nova intenção de execução",intent);
+  s.intents.unshift(intent);
+  s.intents=s.intents.slice(0,500);
+  audit(tenantId,"INTENT","Nova intenção de execução",intent);
   return intent;
 }
-export function listIntents(){
+
+export function listIntents(tenantId:string){
+  const s=state(tenantId);
   const now=Date.now();
-  for(const x of g.__executionIntents!){if(x.status==="PENDING"&&new Date(x.expiresAt).getTime()<=now)x.status="EXPIRED";}
-  return g.__executionIntents!;
+  for(const x of s.intents){
+    if(x.status==="PENDING"&&new Date(x.expiresAt).getTime()<=now)x.status="EXPIRED";
+  }
+  return s.intents;
 }
-export function claimNextIntent(source:string,symbol?:string){
+
+export function claimNextIntent(tenantId:string,source:string,symbol?:string){
   const now=Date.now();
-  const x=listIntents().find(i=>i.source===source&&(!symbol||i.symbol===symbol)&&i.status==="PENDING"&&new Date(i.expiresAt).getTime()>now);
-  if(x){x.status="CLAIMED";audit("CLAIM","Bridge coletou intenção",x);}
+  const x=listIntents(tenantId).find(i=>i.source===source&&(!symbol||i.symbol===symbol)&&i.status==="PENDING"&&new Date(i.expiresAt).getTime()>now);
+  if(x){x.status="CLAIMED";audit(tenantId,"CLAIM","Bridge coletou intenção",x);}
   return x??null;
 }
-export function updateIntent(id:string,status:ExecutionIntent["status"],note?:string){
-  const x=g.__executionIntents!.find(i=>i.id===id);
+
+export function updateIntent(tenantId:string,id:string,status:ExecutionIntent["status"],note?:string){
+  const x=state(tenantId).intents.find(i=>i.id===id);
   if(!x)throw new Error("Intenção não encontrada.");
   x.status=status;x.note=note;
-  audit("EXECUTION",`Intenção ${status}`,x);
+  audit(tenantId,"EXECUTION",`Intenção ${status}`,x);
   return x;
 }
 
-
-export function canCreateIntent(candidate:TradeCandidate,cfg:AutoTradeConfig){
+export function canCreateIntent(tenantId:string,candidate:TradeCandidate,cfg:AutoTradeConfig){
+  const s=state(tenantId);
   const now=Date.now();
-  const sameKey=g.__executionIntents!.filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe);
-  const recentSame=sameKey.find(x=>now-new Date(x.createdAt).getTime()<cfg.cooldownSeconds*1000);
-  if(recentSame)return false;
+  const sameKey=s.intents.filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe);
+  if(sameKey.some(x=>now-new Date(x.createdAt).getTime()<cfg.cooldownSeconds*1000))return false;
 
   const hourAgo=now-3600000;
-  const recentHour=g.__executionIntents!.filter(x=>new Date(x.createdAt).getTime()>=hourAgo);
-  if(recentHour.length>=cfg.maxTradesPerHour)return false;
-
-  const active=g.__executionIntents!.filter(x=>["PENDING","CLAIMED"].includes(x.status));
-  if(active.length>=cfg.maxOpenPositions)return false;
-
+  if(s.intents.filter(x=>new Date(x.createdAt).getTime()>=hourAgo).length>=cfg.maxTradesPerHour)return false;
+  if(s.intents.filter(x=>["PENDING","CLAIMED"].includes(x.status)).length>=cfg.maxOpenPositions)return false;
   return true;
 }
