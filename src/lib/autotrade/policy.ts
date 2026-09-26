@@ -64,6 +64,9 @@ export type TradeCandidate={
   validForSeconds:number;
   updatedAt:string;
   ageSeconds:number;
+  preAlert:boolean;
+  readinessPct:number;
+  preAlertReason?:string;
 };
 
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -83,6 +86,17 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
   if(side==="BUY"&&!cfg.allowBuy) blocks.push("Compras desativadas");
   if(side==="SELL"&&!cfg.allowSell) blocks.push("Vendas desativadas");
 
+  const hardBlocks=blocks.filter(b=>!b.startsWith("Confiança abaixo")&&!b.startsWith("Score abaixo"));
+  const confidenceGap=Math.max(0,cfg.minConfidence-i.signal.confidence);
+  const scoreGap=Math.max(0,cfg.minAbsScore-Math.abs(i.signal.score));
+  const readinessPct=side
+    ?clamp(Math.round(100-((confidenceGap/Math.max(1,cfg.minConfidence))*55+(scoreGap/Math.max(1,cfg.minAbsScore))*45)*100),0,100)
+    :0;
+  const preAlert=Boolean(side)&&hardBlocks.length===0&&blocks.length>0&&confidenceGap<=8&&scoreGap<=8;
+  const preAlertReason=preAlert
+    ?`Setup se aproximando: faltam ${Math.ceil(confidenceGap)} pts de confiança e ${Math.ceil(scoreGap)} pts de score.`
+    :undefined;
+
   const atr=Math.max(Number(i.atr??0),i.price*.0005);
   const stopDistance=atr*cfg.stopAtrMultiple;
   const stopLoss=side==="BUY"?i.price-stopDistance:side==="SELL"?i.price+stopDistance:undefined;
@@ -101,6 +115,9 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
     blocks,
     validForSeconds:60,
     updatedAt:new Date().toISOString(),
-    ageSeconds:Math.max(0,Math.round(i.sourceAgeSeconds??0))
+    ageSeconds:Math.max(0,Math.round(i.sourceAgeSeconds??0)),
+    preAlert,
+    readinessPct,
+    preAlertReason
   };
 }
