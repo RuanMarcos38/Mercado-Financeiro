@@ -15,7 +15,7 @@ export async function GET(req:NextRequest){
   try{
     const isForex=source==="mt5"||String(stream.meta?.assetClass??"").toLowerCase()==="forex"||symbol.includes("/");
     const analysis=isForex?analyzeForex(stream.candles,{sourceQuality:"licensed",newsRisk:.15}):analyzeCandles(stream.candles,{sourceQuality:"licensed",newsRisk:.15});
-    return NextResponse.json({source,symbol,timeframe,lastSeen:stream.lastSeen,bid:stream.bid,ask:stream.ask,spread:stream.spread,candles:stream.candles.length,analysis});
+    return NextResponse.json({source,symbol,timeframe,lastSeen:stream.lastSeen,bid:stream.bid,ask:stream.ask,spread:stream.spread,candles:stream.candles.length,series:stream.candles.slice(-300),analysis});
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"Falha na análise"},{status:400});
   }
