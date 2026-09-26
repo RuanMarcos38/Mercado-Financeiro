@@ -6,8 +6,9 @@ import { createFallbackConnectorKey,listFallbackConnectorKeys,revokeFallbackConn
 
 function hashKey(v:string){return crypto.createHash("sha256").update(v).digest("hex");}
 
-function fallbackRows(tenantId:string){
-  return listFallbackConnectorKeys(tenantId).map(x=>({
+async function fallbackRows(tenantId:string){
+  const rows=await listFallbackConnectorKeys(tenantId);
+  return rows.map(x=>({
     id:x.id,label:x.label,source:x.source,last4:x.last4,active:x.active,
     created_at:x.createdAt,last_seen_at:x.lastSeenAt,mode:"temporary"
   }));
@@ -28,8 +29,8 @@ export async function GET(){
     return NextResponse.json({keys:data??[],storage:"supabase",persistent:true});
   }catch{
     return NextResponse.json({
-      keys:fallbackRows(ctx.tenantId),
-      storage:"temporary",
+      keys:await fallbackRows(ctx.tenantId),
+      storage:"redis",
       persistent:false,
       warning:"Supabase admin ainda não configurado. As chaves funcionam para continuar o teste do MT5, mas devem ser regeneradas após configurar SUPABASE_SECRET_KEY para ficarem persistentes."
     });
@@ -59,12 +60,12 @@ export async function POST(req:NextRequest){
         note:"Copie agora. A chave completa não será exibida novamente."
       });
     }catch{
-      const {plain,row}=createFallbackConnectorKey(ctx.tenantId,label,source);
+      const {plain,row}=await createFallbackConnectorKey(ctx.tenantId,label,source);
       return NextResponse.json({
         ok:true,key:plain,
         credential:{id:row.id,label:row.label,source:row.source,last4:row.last4,active:row.active,created_at:row.createdAt},
-        storage:"temporary",persistent:false,
-        note:"Chave temporária criada para continuar a integração. Ela vale enquanto o processo atual estiver ativo; depois configure SUPABASE_SECRET_KEY e gere uma chave persistente."
+        storage:"redis",persistent:Boolean(process.env.REDIS_URL),
+        note:"Chave criada no armazenamento compartilhado quando Redis estiver configurado."
       });
     }
   }catch(error){
@@ -86,7 +87,7 @@ export async function DELETE(req:NextRequest){
     if(error)throw new Error(error.message);
     return NextResponse.json({ok:true,storage:"supabase"});
   }catch{
-    const ok=revokeFallbackConnectorKey(ctx.tenantId,id);
+    const ok=await revokeFallbackConnectorKey(ctx.tenantId,id);
     return ok
       ?NextResponse.json({ok:true,storage:"temporary"})
       :NextResponse.json({error:"Chave não encontrada"},{status:404});
