@@ -1,0 +1,3 @@
+Mercado-Financeiro redeploy marker
+Version: 2026-09-26-mt5-key-fallback-v1
+Purpose: force EasyPanel to deploy connector key fallback changes.
