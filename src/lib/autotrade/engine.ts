@@ -75,6 +75,15 @@ export function processStream(tenantId:string,input:{
     atr:Number(snapshot.atr14??0),spread:input.spread,newsRisk,sourceAgeSeconds:ageSeconds
   },cfg);
 
+  const previous=getCandidates(tenantId).find(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe);
+  const lastCandleTime=String(input.candles.at(-1)?.time??new Date().toISOString());
+  if((candidate.watch||candidate.preAlert||candidate.status==="APTO")&&candidate.side){
+    const sameMovement=previous?.side===candidate.side&&(previous.watch||previous.preAlert||previous.status==="APTO");
+    candidate.firstSignalAt=sameMovement&&previous?.firstSignalAt?previous.firstSignalAt:lastCandleTime;
+    candidate.firstSignalPrice=sameMovement&&Number.isFinite(Number(previous?.firstSignalPrice))
+      ?Number(previous!.firstSignalPrice)
+      :price;
+  }
   const current=getCandidates(tenantId).filter(x=>!(x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe));
   current.push(candidate);
   current.sort((a,b)=>{
