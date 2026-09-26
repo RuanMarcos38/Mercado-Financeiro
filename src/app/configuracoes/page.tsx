@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect,useState } from "react";
-import { Building2,ChevronLeft,KeyRound,ShieldCheck,User,Users } from "lucide-react";
+import { Bell,Building2,ChevronLeft,KeyRound,ShieldCheck,User,Users } from "lucide-react";
 
 type Me={displayName:string|null;email:string|null;tenantName:string;role:string;tenantId:string};
 
@@ -19,7 +19,7 @@ export default function ConfiguracoesPage(){
     <section className="settingsActions">
       <a href="/usuarios"><Users/> Gerenciar usuários</a>
       <a href="/integracoes"><KeyRound/> Gerenciar integrações MT5/Profit</a>
-      <a href="/autotrade"><ShieldCheck/> Configurar Radar e AutoTrade</a>
+      <a href="/autotrade"><ShieldCheck/> Configurar Radar e AutoTrade</a><a href="/alertas"><Bell/> Alertas e WhatsApp</a>
     </section>
   </main>;
 }
