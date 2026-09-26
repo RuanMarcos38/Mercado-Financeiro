@@ -16,6 +16,7 @@ export type MarketPush={
 };
 
 type StreamState={
+  tenantId:string;
   lastSeen:string;
   source:ConnectorSource;
   symbol:string;
@@ -30,56 +31,57 @@ type StreamState={
 const g=globalThis as typeof globalThis & {
   __marketConnectorStore?:Map<string,StreamState>;
 };
-if(!g.__marketConnectorStore) g.__marketConnectorStore=new Map();
-
+if(!g.__marketConnectorStore)g.__marketConnectorStore=new Map();
 const store=g.__marketConnectorStore;
 
-function key(source:string,symbol:string,timeframe:string){
-  return [source,symbol.toUpperCase(),timeframe].join(":");
+function key(tenantId:string,source:string,symbol:string,timeframe:string){
+  return [tenantId,source,symbol.toUpperCase(),timeframe].join(":");
 }
 
-export function ingestMarketPush(push:MarketPush){
-  const k=key(push.source,push.symbol,push.timeframe);
+export function ingestMarketPush(tenantId:string,push:MarketPush){
+  const k=key(tenantId,push.source,push.symbol,push.timeframe);
   const current=store.get(k);
   const merged=[...(current?.candles??[]),...push.candles]
     .filter(c=>Number.isFinite(c.open)&&Number.isFinite(c.high)&&Number.isFinite(c.low)&&Number.isFinite(c.close))
     .sort((a,b)=>new Date(a.time).getTime()-new Date(b.time).getTime());
 
   const unique=new Map<string,Candle>();
-  for(const c of merged) unique.set(c.time,c);
+  for(const c of merged)unique.set(c.time,c);
   const candles=[...unique.values()].slice(-5000);
 
   const state:StreamState={
+    tenantId,
     lastSeen:new Date().toISOString(),
     source:push.source,
     symbol:push.symbol.toUpperCase(),
     timeframe:push.timeframe,
     candles,
-    bid:push.bid,
-    ask:push.ask,
-    spread:push.spread,
+    bid:push.bid,ask:push.ask,spread:push.spread,
     meta:push.meta
   };
   store.set(k,state);
   return state;
 }
 
-export function getMarketStream(source:string,symbol:string,timeframe:string){
-  return store.get(key(source,symbol,timeframe))??null;
+export function getMarketStream(tenantId:string,source:string,symbol:string,timeframe:string){
+  return store.get(key(tenantId,source,symbol,timeframe))??null;
 }
 
-export function listMarketStreams(){
-  return [...store.values()].map(x=>({
-    source:x.source,
-    symbol:x.symbol,
-    timeframe:x.timeframe,
-    lastSeen:x.lastSeen,
-    candleCount:x.candles.length,
-    bid:x.bid,ask:x.ask,spread:x.spread,
-    meta:x.meta
-  })).sort((a,b)=>b.lastSeen.localeCompare(a.lastSeen));
+export function listMarketStreams(tenantId:string){
+  return [...store.values()]
+    .filter(x=>x.tenantId===tenantId)
+    .map(x=>({
+      source:x.source,
+      symbol:x.symbol,
+      timeframe:x.timeframe,
+      lastSeen:x.lastSeen,
+      candleCount:x.candles.length,
+      bid:x.bid,ask:x.ask,spread:x.spread,
+      meta:x.meta
+    }))
+    .sort((a,b)=>b.lastSeen.localeCompare(a.lastSeen));
 }
 
 export function connectorStoreWarning(){
-  return "Armazenamento em memória é adequado para servidor persistente/dev. Em deploy serverless, configure Redis/Postgres para persistência compartilhada.";
+  return "Streams separados por empresa em memória. Para alta disponibilidade e múltiplas réplicas, persistir em Redis/Postgres.";
 }
