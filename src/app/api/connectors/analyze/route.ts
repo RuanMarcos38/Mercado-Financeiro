@@ -5,6 +5,7 @@ import { analyzeCandles } from "@/lib/analysis-engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 import { getCandidates } from "@/lib/autotrade/store";
 import { getVerifiedPerformance } from "@/lib/performance/verified";
+import { MARKET_ANALYSIS_MAX_AGE_SECONDS,marketDataAgeSeconds } from "@/lib/market-intelligence/cadence";
 import { hydrateSharedMarketStreams } from "@/lib/connectors/shared-streams";
 
 export const dynamic="force-dynamic";
@@ -33,6 +34,7 @@ export async function GET(req:NextRequest){
   }
 
   try{
+    const ageSeconds=marketDataAgeSeconds(stream.lastSeen);
     const professionalConnector=stream.source==="mt5"||stream.source==="profit";
     const isForex=String(stream.meta?.assetClass??"").toLowerCase()==="forex"||symbol.includes("/");
     const external=(stream.meta?.externalContext??{}) as any;
@@ -41,9 +43,10 @@ export async function GET(req:NextRequest){
       ?analyzeForex(stream.candles,{sourceQuality:"licensed",newsRisk})
       :analyzeCandles(stream.candles,{sourceQuality:"licensed",newsRisk});
 
-    const candidate=getCandidates(tenant.tenantId).find(
+    const rawCandidate=getCandidates(tenant.tenantId).find(
       x=>x.source===stream.source&&x.symbol===symbol&&x.timeframe===timeframe
     )??null;
+    const candidate=ageSeconds<=MARKET_ANALYSIS_MAX_AGE_SECONDS?rawCandidate:null;
 
     const snapshot:any=(analysis as any).snapshot??(analysis as any).indicators??{};
     const price=Number(stream.bid??stream.candles.at(-1)?.close??0);
@@ -80,6 +83,9 @@ export async function GET(req:NextRequest){
     return NextResponse.json({
       ready:true,
       source:stream.source,
+      analysisFresh:ageSeconds<=MARKET_ANALYSIS_MAX_AGE_SECONDS,
+      analysisAgeSeconds:ageSeconds,
+      analysisMaxAgeSeconds:MARKET_ANALYSIS_MAX_AGE_SECONDS,
       symbol,timeframe,
       lastSeen:stream.lastSeen,
       bid:stream.bid,ask:stream.ask,spread:stream.spread,
