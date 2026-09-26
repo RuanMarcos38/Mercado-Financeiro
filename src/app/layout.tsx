@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import GlobalLanguageSelector from "@/components/GlobalLanguageSelector";
 
 export const metadata: Metadata = {
   title: "Mercado Financeiro AI",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body><GlobalLanguageSelector/>{children}</body>
     </html>
   );
 }
