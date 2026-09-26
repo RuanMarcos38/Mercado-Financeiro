@@ -31,6 +31,8 @@ RECONNECT_SECONDS=max(2,int(os.getenv("MT5_RECONNECT_SECONDS","5")))
 WARMED_STREAMS=set()
 FOREX_CATALOG_CACHE=[]
 FOREX_CATALOG_AT=0
+WATCHLIST_CACHE=[]
+WATCHLIST_AT=0
 
 TF={
     "M1":(mt5.TIMEFRAME_M1,"1m"),
@@ -141,6 +143,35 @@ def discover_forex_catalog(force=False):
 def original_symbol(normalized):
     return normalized.replace("/","")
 
+def broker_symbol_for_pair(pair):
+    target=pair.upper()
+    for item in discover_forex_catalog():
+        if item.get("symbol")==target:
+            return item.get("brokerSymbol")
+    compact=target.replace("/","")
+    if mt5.symbol_info(compact):
+        return compact
+    return None
+
+def fetch_dynamic_watchlist(force=False):
+    global WATCHLIST_CACHE,WATCHLIST_AT
+    now=time.time()
+    if WATCHLIST_CACHE and not force and now-WATCHLIST_AT<10:
+        return WATCHLIST_CACHE
+    try:
+        r=requests.get(SAAS_URL+"/api/connectors/watchlist",headers=headers(),timeout=10)
+        if r.ok:
+            items=(r.json() or {}).get("items") or []
+            WATCHLIST_CACHE=items
+            WATCHLIST_AT=now
+    except Exception as e:
+        print("WATCHLIST erro",e)
+    return WATCHLIST_CACHE
+
+def tf_name_from_output(tf_out):
+    reverse={"1m":"M1","5m":"M5","10m":"M10","15m":"M15","1h":"H1","1d":"D1"}
+    return reverse.get(tf_out,"M5")
+
 def candles(symbol,tf,tf_out,limit=None):
     count=limit if limit is not None else BARS
     rates=mt5.copy_rates_from_pos(symbol,tf,0,count)
@@ -235,10 +266,11 @@ def poll_intent(symbol):
         print("AUTOTRADE",normalized,status,note)
     except Exception as e: print("erro AutoTrade",normalized,e)
 
-def push(symbol):
+def push(symbol,only_timeframes=None):
     tick=mt5.symbol_info_tick(symbol)
     if tick is None: raise RuntimeError(f"{symbol}: sem tick")
-    for tf_name in TIMEFRAME_NAMES:
+    selected_timeframes=only_timeframes or TIMEFRAME_NAMES
+    for tf_name in selected_timeframes:
         tf,tf_out=TF.get(tf_name,TF["M5"])
         payload={
             "source":"mt5","symbol":normalize_symbol(symbol),"assetClass":"forex","timeframe":tf_out,
@@ -262,12 +294,36 @@ def main():
     try:
         while True:
             ensure_connection()
+            processed=set()
+
             for symbol in SYMBOLS:
                 try:
                     if not mt5.symbol_select(symbol,True):
                         print(symbol,"indisponível no terminal");continue
                     push(symbol)
+                    for tf_name in TIMEFRAME_NAMES:
+                        processed.add((normalize_symbol(symbol),tf_name))
                 except Exception as e:print(symbol,"erro:",e)
+
+            for item in fetch_dynamic_watchlist():
+                try:
+                    pair=str(item.get("symbol") or "").upper()
+                    tf_out=str(item.get("timeframe") or "5m")
+                    tf_name=tf_name_from_output(tf_out)
+                    if (pair,tf_name) in processed:
+                        continue
+                    broker_symbol=broker_symbol_for_pair(pair)
+                    if not broker_symbol:
+                        print("WATCHLIST",pair,"não disponível na corretora")
+                        continue
+                    if not mt5.symbol_select(broker_symbol,True):
+                        print("WATCHLIST",pair,"não selecionável no terminal")
+                        continue
+                    push(broker_symbol,[tf_name])
+                    processed.add((pair,tf_name))
+                except Exception as e:
+                    print("WATCHLIST erro item",item,e)
+
             time.sleep(INTERVAL_SECONDS)
     finally:mt5.shutdown()
 
