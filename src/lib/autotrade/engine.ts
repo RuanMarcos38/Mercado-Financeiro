@@ -34,9 +34,12 @@ export function processStream(tenantId:string,input:{
     return {ready:false,warmup:{required,received:input.candles.length,missing:Math.max(0,required-input.candles.length)}};
   }
 
-  const forex=input.source==="mt5"||input.symbol.includes("/")||String(input.meta?.assetClass??"").toLowerCase()==="forex";
+  const professionalConnector=input.source==="mt5"||input.source==="profit";
+  const forex=input.symbol.includes("/")||String(input.meta?.assetClass??"").toLowerCase()==="forex";
   const newsRisk=Number.isFinite(input.newsRisk)?Number(input.newsRisk):0.15;
-  const analysis:any=forex
+  // MT5 e Profit usam o mesmo motor completo de confluência técnica.
+  // Outras fontes genéricas continuam usando o motor base.
+  const analysis:any=(professionalConnector||forex)
     ?analyzeForex(input.candles,{sourceQuality:"licensed",newsRisk})
     :analyzeCandles(input.candles,{sourceQuality:"licensed",newsRisk});
 
