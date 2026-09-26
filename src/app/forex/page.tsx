@@ -4,11 +4,12 @@ import { useEffect,useRef,useState } from "react";
 import { Activity,Bell,BookOpen,ChevronLeft,Search,ShieldCheck,TrendingUp,Zap } from "lucide-react";
 import LiveCandleChart from "@/components/LiveCandleChart";
 import type { Candle } from "@/lib/market/types";
+import { MARKET_UI_REFRESH_MS,MARKET_ANALYSIS_MAX_AGE_SECONDS } from "@/lib/market-intelligence/cadence";
 
 type Pair={symbol:string;base:string;quote:string;group:string;label:string};
 type PairResponse={counts:{total:number;majors:number;minors:number;exotics:number};pairs:Pair[];providers:Array<{id:string;configured:boolean;realtime:boolean;note:string}>};
 type News={risk:number;items:Array<{title:string;url:string;domain?:string;seenDate?:string}>};
-type LivePayload={ready:boolean;source:string;symbol:string;timeframe:string;lastSeen:string;bid?:number;ask?:number;spread?:number;candleCount:number;series:Candle[];candidate?:any;decision?:any;analysis?:any;externalContext?:any;verifiedPerformance?:any;error?:string};
+type LivePayload={ready:boolean;source:string;symbol:string;timeframe:string;lastSeen:string;bid?:number;ask?:number;spread?:number;candleCount:number;series:Candle[];candidate?:any;decision?:any;analysis?:any;externalContext?:any;verifiedPerformance?:any;analysisFresh?:boolean;analysisAgeSeconds?:number;analysisMaxAgeSeconds?:number;error?:string};
 
 const TFS=["1m","5m","10m","1h"] as const;
 
@@ -23,6 +24,7 @@ export default function ForexPage(){
   const [backtest,setBacktest]=useState<any>(null);
   const [busy,setBusy]=useState(false);
   const [soundEnabled,setSoundEnabled]=useState(false);
+  const [nextRefresh,setNextRefresh]=useState(Math.round(MARKET_UI_REFRESH_MS/1000));
   const lastAlert=useRef("");
   const audioRef=useRef<AudioContext|null>(null);
 
@@ -79,9 +81,18 @@ export default function ForexPage(){
       }
     }
     refresh();
-    const id=setInterval(refresh,2000);
+    setNextRefresh(Math.round(MARKET_UI_REFRESH_MS/1000));
+    const id=setInterval(()=>{
+      refresh();
+      setNextRefresh(Math.round(MARKET_UI_REFRESH_MS/1000));
+    },MARKET_UI_REFRESH_MS);
     return()=>{stop=true;clearInterval(id);};
   },[selected,timeframe,soundEnabled]);
+
+  useEffect(()=>{
+    const id=setInterval(()=>setNextRefresh(v=>v<=1?Math.round(MARKET_UI_REFRESH_MS/1000):v-1),1000);
+    return()=>clearInterval(id);
+  },[]);
 
   const filtered=(pairs?.pairs??[]).filter(p=>p.symbol.includes(query.toUpperCase())||p.group.includes(query.toLowerCase())).slice(0,120);
 
@@ -114,6 +125,13 @@ export default function ForexPage(){
   }
 
   const signal=live?.candidate?.side==="BUY"?"COMPRA":live?.candidate?.side==="SELL"?"VENDA":"AGUARDAR";
+  const stage=live?.candidate?.status==="APTO"?"APTO":live?.candidate?.preAlert?"PRÉ-ALERTA":live?.candidate?.watch?"MONITORAR":"AGUARDAR";
+  const simpleInstruction=
+    stage==="APTO"
+      ?(signal==="COMPRA"?"COMPRA LIBERADA PELO MODELO":"VENDA LIBERADA PELO MODELO")
+      :stage==="PRÉ-ALERTA"?"PREPARE-SE, MAS AINDA NÃO ENTRE"
+      :stage==="MONITORAR"?"MOVIMENTO EM FORMAÇÃO"
+      :"AGUARDE UMA OPORTUNIDADE";
   const confidence=live?.candidate?.confidence??live?.analysis?.signal?.confidence??0;
   const age=live?.lastSeen?Math.max(0,Math.round((Date.now()-new Date(live.lastSeen).getTime())/1000)):null;
 
@@ -122,7 +140,11 @@ export default function ForexPage(){
       <div><a href="/" className="fxBack"><ChevronLeft size={14}/> Painel</a><h1>Inteligência Forex</h1></div>
       <div className="welcomeActions">
         <button className="softAction" onClick={enableAlerts}><Bell size={14}/> {soundEnabled?"Alertas sonoros ativos":"Ativar alertas"}</button>
-        <span className={"liveFeedBadge "+(live?"online":"offline")}><i/>{live?("CONECTADO · "+live.source.toUpperCase()):"AGUARDANDO DADOS"}</span>
+        <span className={"liveFeedBadge "+(live?.analysisFresh===false?"offline":live?"online":"offline")}><i/>{
+  live?.analysisFresh===false
+    ?"DADOS VENCIDOS"
+    :live?("CONECTADO · "+live.source.toUpperCase()):"AGUARDANDO DADOS"
+}</span>
       </div>
     </header>
 
@@ -147,6 +169,11 @@ export default function ForexPage(){
       </article>
 
       <aside className="fxPanel signalConsole">
+        <div className="beginnerDecision">
+          <span className="beginnerDecisionLabel">O QUE FAZER AGORA</span>
+          <strong>{simpleInstruction}</strong>
+          <small>Nova conferência em {nextRefresh}s · decisão válida por até {MARKET_ANALYSIS_MAX_AGE_SECONDS}s com dados ativos</small>
+        </div>
         <div className="signalHeadline">
           {(live?.candidate?.watch||live?.candidate?.preAlert)&&live?.candidate?.status!=="APTO"&&
             <span className="preAlertBadge">
@@ -155,11 +182,11 @@ export default function ForexPage(){
           <div className={"bigSignal "+signal.toLowerCase()}>{signal}</div>
         </div>
         <div className="signalConfidence"><span>Confiança</span><strong>{confidence}%</strong></div>
-        <div className="signalLevels">
-          <div><span>Entrada</span><b>{live?.candidate?.entry??"—"}</b></div>
-          <div><span>Proteção</span><b>{live?.candidate?.stopLoss??"—"}</b></div>
-          <div><span>Alvo</span><b>{live?.candidate?.takeProfit??"—"}</b></div>
-          <div><span>Risco</span><b>{live?.analysis?.signal?.risk??"—"}</b></div>
+        <div className="signalLevels beginnerLevels">
+          <div><span>1. PREÇO PARA ENTRAR</span><b>{live?.candidate?.entry??"—"}</b><small>{stage==="APTO"?"Use somente enquanto o sinal estiver APTO.":"Ainda não entre; aguarde confirmação."}</small></div>
+          <div><span>2. SE DER ERRADO, SAIA EM</span><b>{live?.candidate?.stopLoss??"—"}</b><small>Proteção calculada pelo modelo.</small></div>
+          <div><span>3. OBJETIVO DA OPERAÇÃO</span><b>{live?.candidate?.takeProfit??"—"}</b><small>Alvo estimado para o cenário atual.</small></div>
+          <div><span>RISCO ESTIMADO</span><b>{live?.analysis?.signal?.risk??"—"}</b><small>Reavaliado com os novos dados.</small></div>
         </div>
         <div className="signalStatus"><ShieldCheck size={15}/><div><b>{
   live?.candidate?.status==="APTO"?"APTO":
