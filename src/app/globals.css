@@ -189,3 +189,21 @@ a{text-decoration:none;color:inherit}
 .preAlertBadge{display:inline-flex;width:max-content;align-items:center;border:1px solid #f0d794;background:#fff8df;color:#946b0d;border-radius:999px;padding:5px 8px;font-size:6.5px;font-weight:900}
 .verifiedAccuracy{border:1px solid #bfe6d7;background:#effaf5;color:#26765b;border-radius:8px;padding:8px;font-size:7.5px}
 .signalConsole .fxInfoBox{margin-top:0}
+
+/* MT5-style chart inspection controls */
+.liveChartShell{min-width:0}
+.liveChartTools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:#fbfcfe;min-height:38px}
+.chartOhlc{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;color:#718096;font-size:7px}
+.chartOhlc span{color:#8a96a8}
+.chartOhlc b{font-size:7.5px;color:#53637a;font-weight:800}
+.chartToolButtons{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.chartToolButtons button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:#fff;color:#65738a;border-radius:6px;padding:5px 7px;min-height:28px;font-size:7px;font-weight:800;cursor:pointer}
+.chartToolButtons button:hover{border-color:#c7d7f2;color:var(--blue)}
+.chartToolButtons button.active{background:var(--blue-soft);border-color:#c7d7f2;color:var(--blue)}
+.chartToolButtons button svg{width:12px;height:12px}
+.liveCandleChart{cursor:crosshair;touch-action:pan-y}
+@media(max-width:760px){
+  .liveChartTools{align-items:flex-start;flex-direction:column}
+  .chartToolButtons{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
+  .chartToolButtons button{flex:0 0 auto}
+}
