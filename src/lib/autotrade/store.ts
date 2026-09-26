@@ -80,3 +80,20 @@ export function updateIntent(id:string,status:ExecutionIntent["status"],note?:st
   audit("EXECUTION",`Intenção ${status}`,x);
   return x;
 }
+
+
+export function canCreateIntent(candidate:TradeCandidate,cfg:AutoTradeConfig){
+  const now=Date.now();
+  const sameKey=g.__executionIntents!.filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe);
+  const recentSame=sameKey.find(x=>now-new Date(x.createdAt).getTime()<cfg.cooldownSeconds*1000);
+  if(recentSame)return false;
+
+  const hourAgo=now-3600000;
+  const recentHour=g.__executionIntents!.filter(x=>new Date(x.createdAt).getTime()>=hourAgo);
+  if(recentHour.length>=cfg.maxTradesPerHour)return false;
+
+  const active=g.__executionIntents!.filter(x=>["PENDING","CLAIMED"].includes(x.status));
+  if(active.length>=cfg.maxOpenPositions)return false;
+
+  return true;
+}
