@@ -4,10 +4,14 @@ import { getTenantContext,canManageUsers } from "@/lib/auth/tenant";
 export const dynamic="force-dynamic";
 
 export async function GET(){
+ try{
   const ctx=await getTenantContext();
   if(!ctx)return NextResponse.json({error:"Não autenticado"},{status:401});
   const cfg=getAutoTradeConfig(ctx.tenantId);
   return NextResponse.json({...cfg,liveAllowed:process.env.AUTOTRADE_LIVE_ENABLED==="true",canEdit:canManageUsers(ctx.role)||ctx.role==="trader",role:ctx.role});
+ }catch(error){
+  return NextResponse.json({error:error instanceof Error?error.message:"Falha ao carregar configuração"},{status:500});
+ }
 }
 
 export async function POST(req:NextRequest){
