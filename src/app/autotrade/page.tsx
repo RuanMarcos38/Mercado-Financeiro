@@ -16,7 +16,9 @@ export default function AutoTradePage(){
   const [cfg,setCfg]=useState<Config|null>(null);
   const [adminKey,setAdminKey]=useState("");
   const [error,setError]=useState("");
-  const [busy,setBusy]=useState(false);\n  const seenRef=useRef<Set<string>>(new Set());\n  const [notifications,setNotifications]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const seenRef=useRef<Set<string>>(new Set());
+  const [notifications,setNotifications]=useState(false);
 
   async function load(){
     try{
