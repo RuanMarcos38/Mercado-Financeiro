@@ -177,3 +177,15 @@ a{text-decoration:none;color:inherit}
 
 .autoTrReason{grid-template-columns:.72fr .62fr .85fr .48fr .9fr .62fr .55fr .78fr .78fr .78fr 1.45fr;min-width:1180px}
 .candidateReason{white-space:normal!important;line-height:1.35;color:#6e7a8c;font-size:7px}
+
+/* Forex compact operational UI */
+.compactMenu{padding:0;overflow:hidden}
+.compactMenu>summary,.technicalDetails>summary{list-style:none;display:flex;align-items:center;gap:7px;cursor:pointer;padding:12px 14px;font-size:9px;font-weight:850;color:#4e5d72}
+.compactMenu>summary::-webkit-details-marker,.technicalDetails>summary::-webkit-details-marker{display:none}
+.compactMenu[open]>summary,.technicalDetails[open]>summary{border-bottom:1px solid var(--line)}
+.compactMenuHead{padding:10px 14px 0;margin-bottom:8px}
+.compactMenu .fxPairTabs,.compactMenu .fxNews{margin:0 14px 14px}
+.signalHeadline{display:grid;gap:6px}
+.preAlertBadge{display:inline-flex;width:max-content;align-items:center;border:1px solid #f0d794;background:#fff8df;color:#946b0d;border-radius:999px;padding:5px 8px;font-size:6.5px;font-weight:900}
+.verifiedAccuracy{border:1px solid #bfe6d7;background:#effaf5;color:#26765b;border-radius:8px;padding:8px;font-size:7.5px}
+.signalConsole .fxInfoBox{margin-top:0}
