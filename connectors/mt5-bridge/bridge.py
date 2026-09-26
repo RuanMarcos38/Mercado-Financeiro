@@ -4,7 +4,10 @@ import json
 import math
 import requests
 import MetaTrader5 as mt5
+from dotenv import load_dotenv
 from datetime import datetime, timezone
+
+load_dotenv()
 
 SAAS_URL=os.getenv("SAAS_URL","http://localhost:3000").rstrip("/")
 INGEST_KEY=os.getenv("CONNECTOR_INGEST_KEY","")
