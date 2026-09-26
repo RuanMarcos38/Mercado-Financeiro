@@ -13,6 +13,8 @@ export default function ForexPage(){
   const [selected,setSelected]=useState("EUR/USD");
   const [query,setQuery]=useState("");
   const [csv,setCsv]=useState("time,open,high,low,close,volume\n");
+  const [provider,setProvider]=useState("auto");
+  const [statusMessage,setStatusMessage]=useState("");
   const [analysis,setAnalysis]=useState<any>(null);
   const [backtest,setBacktest]=useState<any>(null);
   const [busy,setBusy]=useState(false);
@@ -24,13 +26,14 @@ export default function ForexPage(){
   const filtered=(pairs?.pairs??[]).filter(p=>p.symbol.includes(query.toUpperCase())||p.group.includes(query.toLowerCase())).slice(0,120);
 
   async function run(path:string,setter:(v:any)=>void){
-    setBusy(true);setError("");
+    setBusy(true);setError("");setStatusMessage("");
     try{
       const res=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
-        pair:selected,timeframe:"5m",provider:"import",csv
+        pair:selected,timeframe:"5m",provider,csv
       })});
       const json=await res.json();
       if(!res.ok) throw new Error(json.error||"Falha");
+      if(json.ready===false){setStatusMessage(json.message||"Aguardando dados de mercado.");setter(null);return;}
       setter(json);
     }catch(e){setError(e instanceof Error?e.message:"Erro inesperado");}
     finally{setBusy(false);}
@@ -67,10 +70,23 @@ export default function ForexPage(){
 
     <div className="fxGrid fxMainGrid">
       <section className="fxPanel">
-        <div className="fxPanelHead"><div><h2>Motor técnico — {selected}</h2><p>Cole candles OHLCV exportados da sua plataforma ou conecte um provider 24h.</p></div><CandlestickChart size={18}/></div>
-        <textarea className="fxCsv" value={csv} onChange={e=>setCsv(e.target.value)} rows={13}/>
+        <div className="fxPanelHead"><div><h2>Motor técnico — {selected}</h2><p>A fonte é escolhida automaticamente. CSV fica disponível apenas como importação manual.</p></div><CandlestickChart size={18}/></div>
+        <div className="fxSourceRow">
+  <label>Fonte
+    <select value={provider} onChange={e=>setProvider(e.target.value)}>
+      <option value="auto">Automática</option>
+      <option value="mt5">MetaTrader 5</option>
+      <option value="oanda">OANDA</option>
+      <option value="twelvedata">Twelve Data</option>
+      <option value="import">Importar CSV</option>
+    </select>
+  </label>
+  <span>{provider==="auto"?"Prioridade: MT5 → OANDA → Twelve Data → CSV":"Fonte selecionada manualmente"}</span>
+</div>
+{provider==="import"&&<textarea className="fxCsv" value={csv} onChange={e=>setCsv(e.target.value)} rows={13}/>}
+{provider!=="import"&&<div className="fxFeedState"><Activity size={16}/><div><b>Análise por feed real</b><span>Selecione o par e clique em Analisar. Quando MT5/Profit estiver conectado, os candles entram automaticamente.</span></div></div>}
         <div className="fxActions"><button disabled={busy} onClick={()=>run("/api/forex/analyze",setAnalysis)}><Sparkles size={15}/> Analisar</button><button disabled={busy} onClick={()=>run("/api/forex/backtest",setBacktest)}><Zap size={15}/> Backtest</button></div>
-        {error&&<div className="errorBox">{error}</div>}
+        {statusMessage&&<div className="fxInfoBox">{statusMessage}</div>}{error&&<div className="errorBox">{error}</div>}
       </section>
 
       <aside className="fxPanel">
