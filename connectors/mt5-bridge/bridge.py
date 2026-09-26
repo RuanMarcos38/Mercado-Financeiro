@@ -12,7 +12,7 @@ load_dotenv()
 SAAS_URL=os.getenv("SAAS_URL","http://localhost:3000").rstrip("/")
 INGEST_KEY=os.getenv("CONNECTOR_INGEST_KEY","")
 SYMBOLS=[s.strip() for s in os.getenv("MT5_SYMBOLS","EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,USDCAD,NZDUSD").split(",") if s.strip()]
-INTERVAL_SECONDS=max(5,int(os.getenv("MT5_PUSH_SECONDS","30")))
+INTERVAL_SECONDS=max(1,int(os.getenv("MT5_PUSH_SECONDS","2")))
 BARS=max(100,min(2000,int(os.getenv("MT5_BARS","400"))))
 TIMEFRAME_NAME=os.getenv("MT5_TIMEFRAME","M5").upper()
 TIMEFRAME_NAMES=[x.strip().upper() for x in os.getenv("MT5_TIMEFRAMES",TIMEFRAME_NAME).split(",") if x.strip()]
@@ -23,9 +23,12 @@ MAX_POSITIONS=max(1,int(os.getenv("MT5_MAX_OPEN_POSITIONS","2")))
 DEVIATION=max(1,int(os.getenv("MT5_DEVIATION_POINTS","20")))
 MAGIC=int(os.getenv("MT5_MAGIC","560056"))
 
+WARMED_STREAMS=set()
+
 TF={
     "M1":(mt5.TIMEFRAME_M1,"1m"),
     "M5":(mt5.TIMEFRAME_M5,"5m"),
+    "M10":(mt5.TIMEFRAME_M10,"10m"),
     "M15":(mt5.TIMEFRAME_M15,"15m"),
     "H1":(mt5.TIMEFRAME_H1,"1h"),
     "D1":(mt5.TIMEFRAME_D1,"1d"),
@@ -55,8 +58,9 @@ def normalize_symbol(s):
 def original_symbol(normalized):
     return normalized.replace("/","")
 
-def candles(symbol,tf,tf_out):
-    rates=mt5.copy_rates_from_pos(symbol,tf,0,BARS)
+def candles(symbol,tf,tf_out,limit=None):
+    count=limit if limit is not None else BARS
+    rates=mt5.copy_rates_from_pos(symbol,tf,0,count)
     if rates is None: raise RuntimeError(f"{symbol}: copy_rates falhou: {mt5.last_error()}")
     return [{
         "symbol":normalize_symbol(symbol),"timeframe":tf_out,
@@ -157,11 +161,12 @@ def push(symbol):
             "source":"mt5","symbol":normalize_symbol(symbol),"assetClass":"forex","timeframe":tf_out,
             "timestamp":datetime.now(timezone.utc).isoformat(),
             "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
-            "candles":candles(symbol,tf,tf_out),
+            "candles":candles(symbol,tf,tf_out,BARS if (symbol,tf_out) not in WARMED_STREAMS else 3),
             "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name}
         }
         r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
         r.raise_for_status()
+        WARMED_STREAMS.add((symbol,tf_out))
         j=r.json()
         decision=j.get("decision") or {}
         candidate=decision.get("candidate") or {}
