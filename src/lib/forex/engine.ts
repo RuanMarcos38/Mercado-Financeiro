@@ -34,6 +34,17 @@ export function analyzeForex(candles:Candle[],opts?:{
   if(s.ema9>s.ema21&&s.ema21>s.ema50){score+=14;reasons.push("Médias móveis alinhadas para alta");}
   if(s.ema9<s.ema21&&s.ema21<s.ema50){score-=14;reasons.push("Médias móveis alinhadas para baixa");}
 
+  if(s.sma20>s.sma50&&s.price>s.sma20){score+=5;reasons.push("SMA 20/50 confirma estrutura compradora");}
+  if(s.sma20<s.sma50&&s.price<s.sma20){score-=5;reasons.push("SMA 20/50 confirma estrutura vendedora");}
+
+  if(s.price>s.vwap){score+=4;reasons.push("Preço acima da VWAP");}
+  if(s.price<s.vwap){score-=4;reasons.push("Preço abaixo da VWAP");}
+
+  const bbMid=(s.bollinger.upper+s.bollinger.lower)/2;
+  if(s.price>bbMid){score+=2;} else if(s.price<bbMid){score-=2;}
+  if(s.price>=s.bollinger.upper) warnings.push("Preço na banda superior de Bollinger");
+  if(s.price<=s.bollinger.lower) warnings.push("Preço na banda inferior de Bollinger");
+
   if(s.macd.histogram>0){score+=8;reasons.push("MACD com momentum comprador");}
   if(s.macd.histogram<0){score-=8;reasons.push("MACD com momentum vendedor");}
 
@@ -62,6 +73,16 @@ export function analyzeForex(candles:Candle[],opts?:{
   if(s.cci20<-50){score-=3;}
   if(s.roc12>0){score+=3;}else if(s.roc12<0){score-=3;}
 
+  if(s.williamsR14>-50&&s.williamsR14<-20){score+=2;}
+  if(s.williamsR14<-50&&s.williamsR14>-80){score-=2;}
+  if(s.williamsR14>=-20) warnings.push("Williams %R em zona de sobrecompra");
+  if(s.williamsR14<=-80) warnings.push("Williams %R em zona de sobrevenda");
+
+  if(s.price>s.donchian20.upper){score+=5;setup.push("Rompimento superior de Donchian");}
+  if(s.price<s.donchian20.lower){score-=5;setup.push("Rompimento inferior de Donchian");}
+
+  if(s.price>s.pivots.pivot){score+=2;}else if(s.price<s.pivots.pivot){score-=2;}
+
   if(s.volumeRatio>=1.3){
     score+=score>=0?5:-5;
     reasons.push("Volume/tick volume acima da média confirma o movimento");
@@ -86,6 +107,9 @@ export function analyzeForex(candles:Candle[],opts?:{
   const session=clamp(opts?.sessionBias??0,-1,1);
   score+=session*4;
 
+  if(s.realizedVolatility>=55) warnings.push("Volatilidade realizada elevada");
+  if(s.realizedVolatility<=8) warnings.push("Volatilidade realizada baixa");
+
   const newsRisk=clamp(opts?.newsRisk??.15,0,1);
   if(newsRisk>=.65) warnings.push("Notícias/eventos de alto impacto: risco de gap, spike e slippage");
   const rawConfidence=clamp(Math.abs(score)*1.18,5,95);
@@ -96,11 +120,37 @@ export function analyzeForex(candles:Candle[],opts?:{
   if(score>=30&&confidence>=45) side="COMPRA";
   if(score<=-30&&confidence>=45) side="VENDA";
 
+  const indicatorsEvaluated={
+    trend:s.trend,
+    ema:{ema9:s.ema9,ema21:s.ema21,ema50:s.ema50},
+    sma:{sma20:s.sma20,sma50:s.sma50},
+    rsi:s.rsi14,
+    macd:s.macd,
+    adx:s.adx14,
+    atr:s.atr14,
+    bollinger:s.bollinger,
+    vwap:s.vwap,
+    stochastic:s.stochastic,
+    roc:s.roc12,
+    williamsR:s.williamsR14,
+    cci:s.cci20,
+    donchian:s.donchian20,
+    fibonacci:s.fib,
+    pivots:s.pivots,
+    supportResistance:s.levels,
+    pullback:s.pullback,
+    ichimoku:s.ichimoku,
+    volumeRatio:s.volumeRatio,
+    realizedVolatility:s.realizedVolatility
+  };
+
   return {
     generatedAt:new Date().toISOString(),
     regime:s.trend.direction,
     sourceQuality:opts?.sourceQuality??"imported",
     snapshot:s,
+    indicatorsEvaluated,
+    indicatorCoverage:Object.keys(indicatorsEvaluated).length,
     signal:{
       side,
       confidence,
