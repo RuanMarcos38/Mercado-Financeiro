@@ -17,7 +17,7 @@ export type ProcessResult={
   intent?:unknown;
 };
 
-export function processStream(input:{
+export function processStream(tenantId:string,input:{
   source:string;
   symbol:string;
   timeframe:string;
@@ -31,50 +31,36 @@ export function processStream(input:{
 }):ProcessResult{
   const required=60;
   if(input.candles.length<required){
-    return {
-      ready:false,
-      warmup:{
-        required,
-        received:input.candles.length,
-        missing:Math.max(0,required-input.candles.length)
-      }
-    };
+    return {ready:false,warmup:{required,received:input.candles.length,missing:Math.max(0,required-input.candles.length)}};
   }
 
   const forex=input.source==="mt5"||input.symbol.includes("/")||String(input.meta?.assetClass??"").toLowerCase()==="forex";
   const newsRisk=Number.isFinite(input.newsRisk)?Number(input.newsRisk):0.15;
   const analysis:any=forex
-    ? analyzeForex(input.candles,{sourceQuality:"licensed",newsRisk})
-    : analyzeCandles(input.candles,{sourceQuality:"licensed",newsRisk});
+    ?analyzeForex(input.candles,{sourceQuality:"licensed",newsRisk})
+    :analyzeCandles(input.candles,{sourceQuality:"licensed",newsRisk});
 
   const signal:any=analysis.signal;
   const snapshot:any=analysis.snapshot??analysis.indicators??{};
   const price=Number(input.bid??input.candles.at(-1)?.close??0);
   const ageSeconds=Math.max(0,Math.round((Date.now()-new Date(input.lastSeen).getTime())/1000));
-  const cfg=getAutoTradeConfig();
+  const cfg=getAutoTradeConfig(tenantId);
 
   const candidate=evaluateCandidate({
-    source:input.source,
-    symbol:input.symbol,
-    timeframe:input.timeframe,
-    signal,
-    price,
-    atr:Number(snapshot.atr14??0),
-    spread:input.spread,
-    newsRisk,
-    sourceAgeSeconds:ageSeconds
+    source:input.source,symbol:input.symbol,timeframe:input.timeframe,signal,price,
+    atr:Number(snapshot.atr14??0),spread:input.spread,newsRisk,sourceAgeSeconds:ageSeconds
   },cfg);
 
-  const current=getCandidates().filter(x=>!(x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe));
+  const current=getCandidates(tenantId).filter(x=>!(x.source===candidate.source&&x.symbol===candidate.symbol&&x.timeframe===candidate.timeframe));
   current.push(candidate);
   current.sort((a,b)=>{
     if(a.status==="APTO"&&b.status!=="APTO")return -1;
     if(b.status==="APTO"&&a.status!=="APTO")return 1;
     return b.confidence-a.confidence;
   });
-  setCandidates(current);
+  setCandidates(tenantId,current);
 
-  const sameSymbol=getCandidates().filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol);
+  const sameSymbol=getCandidates(tenantId).filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol);
   const sameSideApt=sameSymbol.filter(x=>x.status==="APTO"&&x.side===candidate.side);
   const confirmations=sameSideApt.length;
   const availableTimeframes=new Set(sameSymbol.map(x=>x.timeframe)).size;
@@ -82,23 +68,17 @@ export function processStream(input:{
   const consensusPassed=candidate.status==="APTO"&&confirmations>=consensusRequired;
 
   let intent:unknown=undefined;
-  if(cfg.mode!=="off"&&consensusPassed&&canCreateIntent(candidate,cfg)){
-    intent=enqueueIntent(candidate,cfg.mode);
+  if(cfg.mode!=="off"&&consensusPassed&&canCreateIntent(tenantId,candidate,cfg)){
+    intent=enqueueIntent(tenantId,candidate,cfg.mode);
   }
 
   return {
     ready:true,
     candidate:{
       ...candidate,
-      reasons:[
-        ...candidate.reasons,
-        `Consenso multi-timeframe: ${confirmations}/${availableTimeframes} confirmações ${candidate.side??""}`
-      ]
+      reasons:[...candidate.reasons,`Consenso multi-timeframe: ${confirmations}/${availableTimeframes} confirmações ${candidate.side??""}`]
     },
-    analysis:{
-      ...analysis,
-      consensus:{confirmations,availableTimeframes,required:consensusRequired,passed:consensusPassed}
-    },
+    analysis:{...analysis,consensus:{confirmations,availableTimeframes,required:consensusRequired,passed:consensusPassed}},
     intent
   };
 }
