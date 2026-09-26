@@ -93,7 +93,7 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
   const confidenceGap=Math.max(0,cfg.minConfidence-i.signal.confidence);
   const scoreGap=Math.max(0,cfg.minAbsScore-Math.abs(i.signal.score));
   const readinessPct=side
-    ?clamp(Math.round(100-((confidenceGap/Math.max(1,cfg.minConfidence))*55+(scoreGap/Math.max(1,cfg.minAbsScore))*45)*100),0,100)
+    ?clamp(Math.round(100-((confidenceGap/Math.max(1,cfg.minConfidence))*55+(scoreGap/Math.max(1,cfg.minAbsScore))*45)),0,100)
     :0;
   const watch=Boolean(side)&&hardBlocks.length===0&&confidenceGap<=15&&scoreGap<=15;
   const preAlert=Boolean(side)&&hardBlocks.length===0&&blocks.length>0&&confidenceGap<=8&&scoreGap<=8;
