@@ -14,7 +14,8 @@
     "lightweight-charts": "^5.0.8",
     "lucide-react": "^0.468.0",
     "@supabase/supabase-js": "^2.57.4",
-    "@supabase/ssr": "^0.7.0"
+    "@supabase/ssr": "^0.7.0",
+    "ioredis": "^5.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
