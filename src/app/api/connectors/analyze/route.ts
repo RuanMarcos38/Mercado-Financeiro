@@ -5,12 +5,15 @@ import { analyzeCandles } from "@/lib/analysis-engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 import { getCandidates } from "@/lib/autotrade/store";
 import { getVerifiedPerformance } from "@/lib/performance/verified";
+import { hydrateSharedMarketStreams } from "@/lib/connectors/shared-streams";
 
 export const dynamic="force-dynamic";
 
 export async function GET(req:NextRequest){
   const tenant=await resolveRequestTenant(req,{allowConnector:true});
   if(!tenant)return NextResponse.json({error:"Não autorizado"},{status:401});
+
+  await hydrateSharedMarketStreams(tenant.tenantId);
 
   const requestedSource=req.nextUrl.searchParams.get("source")??"auto";
   const symbol=(req.nextUrl.searchParams.get("symbol")??"EUR/USD").toUpperCase();
