@@ -9,12 +9,11 @@ type Candidate={
   reasons:string[];blocks:string[];validForSeconds:number;
 };
 type Radar={generatedAt:string;mode:string;liveAllowed:boolean;total:number;aptos:number;candidates:Candidate[];intentsCreated:number};
-type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsScore:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;note?:string};
+type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsScore:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;canEdit?:boolean;role?:string;note?:string};
 
 export default function AutoTradePage(){
   const [radar,setRadar]=useState<Radar|null>(null);
   const [cfg,setCfg]=useState<Config|null>(null);
-  const [adminKey,setAdminKey]=useState("");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
   const seenRef=useRef<Set<string>>(new Set());
@@ -55,7 +54,7 @@ export default function AutoTradePage(){
     try{
       const r=await fetch("/api/autotrade/config",{
         method:"POST",
-        headers:{"content-type":"application/json",...(adminKey?{"x-autotrade-admin-key":adminKey}:{})},
+        headers:{"content-type":"application/json"},
         body:JSON.stringify(patch)
       });
       const j=await r.json();if(!r.ok)throw new Error(j.error||"Falha ao atualizar");
@@ -94,11 +93,10 @@ export default function AutoTradePage(){
     <section className="autoGrid">
       <article className="autoPanel">
         <div className="fxPanelHead"><div><h2>Controle de execução</h2><p>Paper é recomendado para validação; Live exige liberação do servidor e do bridge local.</p></div><ShieldCheck size={18}/></div>
-        <label className="adminField">Chave administrativa do AutoTrade<input type="password" value={adminKey} onChange={e=>setAdminKey(e.target.value)} placeholder="AUTOTRADE_ADMIN_KEY"/></label>
-        <div className="modeButtons">
-          <button disabled={busy} className={cfg?.mode==="off"?"active off":""} onClick={()=>save({mode:"off"})}><Square/> OFF</button>
-          <button disabled={busy} className={cfg?.mode==="paper"?"active paper":""} onClick={()=>save({mode:"paper"})}><Play/> PAPER</button>
-          <button disabled={busy||!cfg?.liveAllowed} className={cfg?.mode==="live"?"active live":""} onClick={()=>save({mode:"live"})}><Zap/> LIVE</button>
+                <div className="modeButtons">
+          <button disabled={busy||cfg?.canEdit===false} className={cfg?.mode==="off"?"active off":""} onClick={()=>save({mode:"off"})}><Square/> OFF</button>
+          <button disabled={busy||cfg?.canEdit===false} className={cfg?.mode==="paper"?"active paper":""} onClick={()=>save({mode:"paper"})}><Play/> PAPER</button>
+          <button disabled={busy||cfg?.canEdit===false||!cfg?.liveAllowed} className={cfg?.mode==="live"?"active live":""} onClick={()=>save({mode:"live"})}><Zap/> LIVE</button>
         </div>
         {!cfg?.liveAllowed&&<div className="autoWarning"><AlertTriangle/> Live está bloqueado no servidor. É necessário AUTOTRADE_LIVE_ENABLED=true.</div>}
 
