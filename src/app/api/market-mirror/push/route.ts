@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from "next/server";
 import { ingestGlobalMarketPush,type MarketPush } from "@/lib/connectors/market-stream";
+import { analyzeGlobalStream } from "@/lib/market-mirror/opportunities";
 
 export const dynamic="force-dynamic";
 
@@ -14,9 +15,10 @@ export async function POST(req:NextRequest){
     const body=await req.json() as MarketPush;
     if(!body.symbol||!body.timeframe||!Array.isArray(body.candles))throw new Error("symbol, timeframe e candles são obrigatórios");
     const saved=ingestGlobalMarketPush(body);
+    const result=analyzeGlobalStream(saved,body.assetClass,body.source==="twelvedata"?"public":"licensed");
     return NextResponse.json({
       ok:true,scope:"global",source:saved.source,symbol:saved.symbol,timeframe:saved.timeframe,
-      candles:saved.candles.length,lastSeen:saved.lastSeen
+      candles:saved.candles.length,lastSeen:saved.lastSeen,decision:result
     });
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"Payload inválido"},{status:400});
