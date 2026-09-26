@@ -32,7 +32,17 @@ export default function ForexPage(){
     fetch("/api/forex/pairs").then(r=>r.json()).then(setPairs).catch(()=>{});
     setSoundEnabled(localStorage.getItem("mercadoai-sound")==="1");
   },[]);
-  useEffect(()=>{fetch("/api/forex/news?pair="+encodeURIComponent(selected)+"&hours=24").then(r=>r.json()).then(setNews).catch(()=>{});},[selected]);
+  useEffect(()=>{
+    fetch("/api/forex/news?pair="+encodeURIComponent(selected)+"&hours=24").then(r=>r.json()).then(setNews).catch(()=>{});
+  },[selected]);
+
+  useEffect(()=>{
+    fetch("/api/connectors/watchlist",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({symbol:selected,timeframe})
+    }).catch(()=>{});
+  },[selected,timeframe]);
 
   useEffect(()=>{
     let stop=false;
@@ -94,7 +104,7 @@ export default function ForexPage(){
     return()=>clearInterval(id);
   },[]);
 
-  const filtered=(pairs?.pairs??[]).filter(p=>p.symbol.includes(query.toUpperCase())||p.group.includes(query.toLowerCase())).slice(0,120);
+  const filtered=(pairs?.pairs??[]).filter(p=>p.symbol.includes(query.toUpperCase())||p.group.includes(query.toLowerCase()));
 
   async function enableAlerts(){
     if(typeof Notification!=="undefined")await Notification.requestPermission();
