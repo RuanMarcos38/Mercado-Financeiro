@@ -259,7 +259,7 @@ export default function Home(){
               <div className="marketFilters">{["Reais","Ações","BCB","Opcionais"].map(f=><button key={f} className={marketFilter===f?"active":""} onClick={()=>setMarketFilter(f)}>{f}</button>)}</div>
               <div className="novaTable">
                 <div className="novaTr novaTh"><span>Ativo</span><span>Preço</span><span>Variação</span><span>Fonte</span><span>Sinal IA</span><span>Conf.</span><span>Atualizado</span></div>
-                {filteredAssets.map((a,i)=>{
+                {(marketFilter==="Reais"||marketFilter==="Ações"?filteredAssets:[]).map((a,i)=>{
                   const s=a.analysis?.signal;
                   return <div className="novaTr" key={a.symbol}>
                     <span className="assetCell"><i className={`assetDot d${i%5+1}`}/><b>{a.symbol}</b><small>{a.name}</small></span>
@@ -271,7 +271,7 @@ export default function Home(){
                     <span>{fmtTime(a.marketTime)}</span>
                   </div>
                 })}
-                {data?.ptax && <div className="novaTr">
+                {(marketFilter==="Reais"||marketFilter==="BCB")&&data?.ptax && <div className="novaTr">
                   <span className="assetCell"><i className="assetDot d2"/><b>USD/BRL</b><small>PTAX oficial</small></span>
                   <span><b>{fmtPrice(data.ptax.price)}</b></span>
                   <span className={(data.ptax.changePercent??0)>=0?"upText":"downText"}>{fmtPct(data.ptax.changePercent)}</span>
@@ -282,10 +282,10 @@ export default function Home(){
                 </div>}
               </div>
 
-              <div className="unavailableBox">
+              {(marketFilter==="Reais"||marketFilter==="Opcionais")&&<div className="unavailableBox">
                 <b>Classes preservadas no projeto sem preço inventado</b>
                 {(data?.unavailable??[]).map(x=><p key={x.symbol}><strong>{x.symbol}</strong> — {x.reason}</p>)}
-              </div>
+              </div>}
             </section>
           </div>
 
