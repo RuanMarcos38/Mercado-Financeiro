@@ -1,4 +1,4 @@
-export type ForexPair={symbol:string;base:string;quote:string;group:"major"|"minor"|"exotic";label:string;source?:"catalog"|"mt5"};
+export type ForexPair={symbol:string;base:string;quote:string;group:"major"|"minor"|"exotic";label:string;source?:"catalog"|"mt5";brokerSymbol?:string};
 
 const mk=(base:string,quote:string,group:ForexPair["group"],source:ForexPair["source"]="catalog"):ForexPair=>({
   symbol:base+"/"+quote,base,quote,group,label:base+" / "+quote,source
