@@ -7,6 +7,7 @@ export type VerifiedPerformance={
   profitFactor:number|null;
   maxDrawdownPct:number;
   measuredAt:string;
+  validationType:"backtest"|"forward";
   accuracyClaimAllowed:boolean;
   accuracyLabel:string|null;
 };
@@ -17,7 +18,7 @@ if(!g.__verifiedPerformance)g.__verifiedPerformance=new Map();
 function key(symbol:string,timeframe:string,provider:string){return [provider,symbol.toUpperCase(),timeframe].join(":");}
 
 export function recordVerifiedPerformance(input:Omit<VerifiedPerformance,"measuredAt"|"accuracyClaimAllowed"|"accuracyLabel">){
-  const accuracyClaimAllowed=input.signals>=100&&input.winRate>=99;
+  const accuracyClaimAllowed=input.validationType==="forward"&&input.signals>=100&&input.winRate>=99;
   const value:VerifiedPerformance={
     ...input,
     measuredAt:new Date().toISOString(),
