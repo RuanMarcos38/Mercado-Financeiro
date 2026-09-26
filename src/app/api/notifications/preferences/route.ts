@@ -1,7 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { getTenantContext,canManageUsers } from "@/lib/auth/tenant";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getRedisNotificationPreferences,saveRedisNotificationPreferences } from "@/lib/notifications/preferences-store";
+import { getRedisNotificationPreferences,saveRedisNotificationPreferences,getMemoryNotificationPreferences,saveMemoryNotificationPreferences } from "@/lib/notifications/preferences-store";
 
 export const dynamic="force-dynamic";
 
@@ -26,6 +26,9 @@ export async function GET(){
 
   const redis=await getRedisNotificationPreferences(ctx.tenantId);
   if(redis)return NextResponse.json({...redis,storage:"redis"});
+
+  const memory=getMemoryNotificationPreferences(ctx.tenantId);
+  if(memory)return NextResponse.json({...memory,storage:"memory"});
 
   return NextResponse.json({...defaults(ctx.tenantId),storage:"environment"});
 }
@@ -58,7 +61,12 @@ export async function POST(req:NextRequest){
     const saved=await saveRedisNotificationPreferences(payload);
     if(saved)return NextResponse.json({ok:true,storage:"redis"});
 
-    return NextResponse.json({error:"Não há armazenamento persistente configurado para salvar os alertas."},{status:503});
+    saveMemoryNotificationPreferences(payload);
+    return NextResponse.json({
+      ok:true,
+      storage:"memory",
+      warning:"Alertas salvos no processo atual. Configure Redis ou Supabase para persistência entre reinícios."
+    });
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"Falha ao salvar alertas"},{status:400});
   }
