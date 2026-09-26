@@ -81,6 +81,8 @@ check("Usuários: atualizar",users.includes("onClick={load}"));
 check("Usuários: criar",users.includes("onSubmit={create}"));
 check("Usuários: ativar/desativar",users.includes("active:!u.active"));
 check("Usuários: alterar perfil",users.includes("role:e.target.value"));
+check("Usuários: criar empresa",users.includes("createCompany")&&users.includes("/api/companies"));
+check("Usuários: formulário nova empresa",users.includes("Nova empresa"));
 
 // Alerts
 check("Alertas: salvar",alerts.includes("onSubmit={save}"));
@@ -102,7 +104,8 @@ for(const p of [
  "src/app/api/notifications/preferences/route.ts",
  "src/app/api/autotrade/radar/route.ts",
  "src/app/api/autotrade/config/route.ts",
- "src/app/api/users/route.ts"
+ "src/app/api/users/route.ts",
+ "src/app/api/companies/route.ts"
 ])check("Rota: "+p,exists(p));
 
 const failed=checks.filter(x=>!x.ok);
