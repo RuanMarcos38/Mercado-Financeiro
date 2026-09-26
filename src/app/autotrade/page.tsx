@@ -11,6 +11,18 @@ type Candidate={
 type Radar={generatedAt:string;mode:string;liveAllowed:boolean;total:number;aptos:number;candidates:Candidate[];intentsCreated:number};
 type Config={mode:"off"|"paper"|"live";minConfidence:number;minAbsScore:number;maxNewsRisk:number;maxSpreadPct:number;maxOpenPositions:number;maxTradesPerHour:number;riskPerTradePct:number;dailyLossLimitPct:number;takeProfitR:number;stopAtrMultiple:number;cooldownSeconds:number;allowBuy:boolean;allowSell:boolean;liveAllowed?:boolean;canEdit?:boolean;role?:string;note?:string};
 
+async function readJsonSafe(response:Response){
+  const text=await response.text();
+  if(!text){
+    throw new Error(`API ${response.url.split("/").pop()||""} retornou resposta vazia (${response.status}).`);
+  }
+  try{
+    return JSON.parse(text);
+  }catch{
+    throw new Error(`API retornou resposta inválida (${response.status}). Atualize a página após o deploy concluir.`);
+  }
+}
+
 export default function AutoTradePage(){
   const [radar,setRadar]=useState<Radar|null>(null);
   const [cfg,setCfg]=useState<Config|null>(null);
@@ -25,8 +37,9 @@ export default function AutoTradePage(){
         fetch("/api/autotrade/radar",{cache:"no-store"}),
         fetch("/api/autotrade/config",{cache:"no-store"})
       ]);
-      const rj=await r.json();const cj=await c.json();
-      if(!r.ok)throw new Error(rj.error||"Falha no radar");
+      const [rj,cj]=await Promise.all([readJsonSafe(r),readJsonSafe(c)]);
+      if(!r.ok)throw new Error(rj.error||`Falha no radar (${r.status})`);
+      if(!c.ok)throw new Error(cj.error||`Falha na configuração (${c.status})`);
       if(notifications && typeof Notification!=="undefined" && Notification.permission==="granted"){
         for(const x of (rj.candidates??[]).filter((v:Candidate)=>v.status==="APTO")){
           const k=[x.source,x.symbol,x.timeframe,x.side,x.score].join(":");
@@ -57,7 +70,8 @@ export default function AutoTradePage(){
         headers:{"content-type":"application/json"},
         body:JSON.stringify(patch)
       });
-      const j=await r.json();if(!r.ok)throw new Error(j.error||"Falha ao atualizar");
+      const j=await readJsonSafe(r);
+      if(!r.ok)throw new Error(j.error||`Falha ao atualizar (${r.status})`);
       setCfg(j);await load();
     }catch(e){setError(e instanceof Error?e.message:"Falha");}
     finally{setBusy(false);}
