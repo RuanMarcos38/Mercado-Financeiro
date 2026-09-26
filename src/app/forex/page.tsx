@@ -22,9 +22,14 @@ export default function ForexPage(){
   const [error,setError]=useState("");
   const [backtest,setBacktest]=useState<any>(null);
   const [busy,setBusy]=useState(false);
+  const [soundEnabled,setSoundEnabled]=useState(false);
   const lastAlert=useRef("");
+  const audioRef=useRef<AudioContext|null>(null);
 
-  useEffect(()=>{fetch("/api/forex/pairs").then(r=>r.json()).then(setPairs).catch(()=>{});},[]);
+  useEffect(()=>{
+    fetch("/api/forex/pairs").then(r=>r.json()).then(setPairs).catch(()=>{});
+    setSoundEnabled(localStorage.getItem("mercadoai-sound")==="1");
+  },[]);
   useEffect(()=>{fetch("/api/forex/news?pair="+encodeURIComponent(selected)+"&hours=24").then(r=>r.json()).then(setNews).catch(()=>{});},[selected]);
 
   useEffect(()=>{
@@ -46,6 +51,21 @@ export default function ForexPage(){
                   body:j.timeframe+" · confiança "+c.confidence+"% · entrada "+c.entry+(c.preAlert?" · aguardando confirmação final":"")
                 });
               }
+              if(soundEnabled){
+                try{
+                  const ctx=audioRef.current??new AudioContext();
+                  audioRef.current=ctx;
+                  const osc=ctx.createOscillator();
+                  const gain=ctx.createGain();
+                  osc.type="sine";
+                  osc.frequency.value=c.preAlert?620:(c.side==="BUY"?880:520);
+                  gain.gain.setValueAtTime(.0001,ctx.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.02);
+                  gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.28);
+                  osc.connect(gain);gain.connect(ctx.destination);
+                  osc.start();osc.stop(ctx.currentTime+.3);
+                }catch{}
+              }
             }
           }
         }else{
@@ -59,13 +79,26 @@ export default function ForexPage(){
     refresh();
     const id=setInterval(refresh,2000);
     return()=>{stop=true;clearInterval(id);};
-  },[selected,timeframe]);
+  },[selected,timeframe,soundEnabled]);
 
   const filtered=(pairs?.pairs??[]).filter(p=>p.symbol.includes(query.toUpperCase())||p.group.includes(query.toLowerCase())).slice(0,120);
 
   async function enableAlerts(){
-    if(typeof Notification==="undefined")return;
-    await Notification.requestPermission();
+    if(typeof Notification!=="undefined")await Notification.requestPermission();
+    try{
+      const ctx=audioRef.current??new AudioContext();
+      audioRef.current=ctx;
+      await ctx.resume();
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.frequency.value=740;
+      gain.gain.setValueAtTime(.0001,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.12,ctx.currentTime+.02);
+      gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.18);
+      osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.2);
+      setSoundEnabled(true);
+      localStorage.setItem("mercadoai-sound","1");
+    }catch{}
   }
 
   async function runBacktest(){
@@ -86,7 +119,7 @@ export default function ForexPage(){
     <header className="fxTop">
       <div><a href="/" className="fxBack"><ChevronLeft size={14}/> Painel</a><h1>Inteligência Forex</h1></div>
       <div className="welcomeActions">
-        <button className="softAction" onClick={enableAlerts}><Bell size={14}/> Ativar alertas</button>
+        <button className="softAction" onClick={enableAlerts}><Bell size={14}/> {soundEnabled?"Alertas sonoros ativos":"Ativar alertas"}</button>
         <span className={"liveFeedBadge "+(live?"online":"offline")}><i/>{live?("CONECTADO · "+live.source.toUpperCase()):"AGUARDANDO DADOS"}</span>
       </div>
     </header>
