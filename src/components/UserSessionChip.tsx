@@ -16,12 +16,13 @@ export default function UserSessionChip(){
     window.location.href="/login";
   }
 
-  const initials=(me?.displayName||me?.email||"US").split(/s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  const initials=(me?.displayName||me?.email||"US").split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  const roleLabel:Record<string,string>={owner:"Proprietário",admin:"Administrador",trader:"Operador",viewer:"Visualizador"};
 
   return <div className="sessionWrap">
     <button className="userChip userChipButton" onClick={()=>setOpen(v=>!v)}>
       <span>{initials}</span>
-      <div><b>{me?.displayName||"Usuário"}</b><small>{me?.tenantName||"Empresa"} · {me?.role||"..."}</small></div>
+      <div><b>{me?.displayName||"Usuário"}</b><small>{me?.tenantName||"Empresa"} · {me?.role?roleLabel[me.role]??me.role:"..."}</small></div>
       <ChevronDown size={14}/>
     </button>
     {open&&<div className="sessionMenu">
