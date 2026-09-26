@@ -116,7 +116,7 @@ export default function ForexPage(){
         <div className="signalConfidence"><span>Confiança</span><strong>{confidence}%</strong></div>
         <div className="signalLevels">
           <div><span>Entrada</span><b>{live?.candidate?.entry??"—"}</b></div>
-          <div><span>Stop</span><b>{live?.candidate?.stopLoss??"—"}</b></div>
+          <div><span>Proteção</span><b>{live?.candidate?.stopLoss??"—"}</b></div>
           <div><span>Alvo</span><b>{live?.candidate?.takeProfit??"—"}</b></div>
           <div><span>Risco</span><b>{live?.analysis?.signal?.risk??"—"}</b></div>
         </div>
@@ -147,7 +147,7 @@ export default function ForexPage(){
           <div><span>Regime</span><b>{live?.analysis?.regime??"—"}</b></div>
           <div><span>RSI</span><b>{Number(live?.analysis?.snapshot?.rsi14??0).toFixed(1)}</b></div>
           <div><span>ADX</span><b>{Number(live?.analysis?.snapshot?.adx14??0).toFixed(1)}</b></div>
-          <div><span>Score</span><b>{live?.candidate?.score??live?.analysis?.signal?.score??"—"}</b></div>
+          <div><span>Pontuação</span><b>{live?.candidate?.score??live?.analysis?.signal?.score??"—"}</b></div>
           <div><span>Notícias</span><b>{live?.externalContext?Math.round((live.externalContext.newsRisk??0)*100)+"% risco":"—"}</b></div>
           <div><span>Notícias</span><b>{live?.externalContext?.headlines??"—"}</b></div>
         </div>
@@ -161,7 +161,7 @@ export default function ForexPage(){
         <div><span>Sinais</span><strong>{backtest.signals}</strong></div>
         <div><span>Taxa de acerto</span><strong>{backtest.winRate}%</strong></div>
         <div><span>Fator de lucro</span><strong>{backtest.profitFactor??"—"}</strong></div>
-        <div><span>Perda máxima</span><strong>{backtest.maxPerda máximaPct}%</strong></div>
+        <div><span>Perda máxima</span><strong>{backtest.maxDrawdownPct}%</strong></div>
       </div>
     </section>}
   </main>;
