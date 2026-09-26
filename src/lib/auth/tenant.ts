@@ -44,7 +44,13 @@ async function bootstrapMembership(user:{id:string;email?:string|null;user_metad
       .maybeSingle();
 
     if(legacyProfile?.tenant_id){
-      const mapped=mapLegacyRole(legacyProfile.role);
+      let mapped=mapLegacyRole(legacyProfile.role);
+      try{
+        const {count}=await admin.from("profiles")
+          .select("id",{count:"exact",head:true})
+          .eq("tenant_id",legacyProfile.tenant_id);
+        if((count??0)<=1)mapped="owner";
+      }catch{}
       const membershipRole=mapped==="owner"?"owner":mapped;
       const {error}=await admin.from("tenant_memberships").upsert({
         tenant_id:legacyProfile.tenant_id,
@@ -131,6 +137,25 @@ export async function getTenantContext():Promise<TenantContext|null>{
       .maybeSingle();
 
     if(membership?.tenant_id){
+      let effectiveRole=membership.role as TenantContext["role"];
+      if(!["owner","admin"].includes(effectiveRole)){
+        try{
+          const admin=createSupabaseAdminClient();
+          const {data:members}=await admin.from("tenant_memberships")
+            .select("user_id,role,active")
+            .eq("tenant_id",membership.tenant_id)
+            .eq("active",true);
+          const active=members??[];
+          const hasManager=active.some((m:any)=>m.role==="owner"||m.role==="admin");
+          if(!hasManager&&active.length<=1){
+            await admin.from("tenant_memberships")
+              .update({role:"owner"})
+              .eq("tenant_id",membership.tenant_id)
+              .eq("user_id",user.id);
+            effectiveRole="owner";
+          }
+        }catch{}
+      }
       const [{data:tenant},{data:profile}]=await Promise.all([
         supabase.from("tenants").select("name").eq("id",membership.tenant_id).maybeSingle(),
         supabase.from("profiles").select("display_name").eq("id",user.id).maybeSingle()
@@ -140,7 +165,7 @@ export async function getTenantContext():Promise<TenantContext|null>{
         email:user.email??null,
         tenantId:membership.tenant_id,
         tenantName:tenant?.name??"Empresa",
-        role:membership.role as TenantContext["role"],
+        role:effectiveRole,
         displayName:profile?.display_name??user.user_metadata?.display_name??null,
         storageMode:"memberships"
       };
