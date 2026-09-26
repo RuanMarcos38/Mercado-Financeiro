@@ -16,12 +16,17 @@ NELOGICA_USER=os.getenv("PROFIT_USER","")
 NELOGICA_PASSWORD=os.getenv("PROFIT_PASSWORD","")
 PUSH_SECONDS=max(1,int(os.getenv("PROFIT_PUSH_SECONDS","2")))
 TICKERS_RAW=[x.strip() for x in os.getenv("PROFIT_TICKERS","PETR4:B,VALE3:B").split(",") if x.strip()]
+ROUTING_ENABLED=os.getenv("PROFIT_ROUTING_ENABLED","0")=="1"
+ROUTING_ACCOUNT_HINT=os.getenv("PROFIT_ACCOUNT_ID","").strip()
+ROUTING_BROKER_HINT=int(os.getenv("PROFIT_BROKER_ID","0") or 0)
 
 NL_OK=0
 LOGIN=0
+ROUTING=1
 MARKET=2
 ACTIVATION=3
 LOGIN_CONNECTED=0
+ROUTING_BROKER_CONNECTED=5
 MARKET_CONNECTED=4
 ACTIVATION_VALID=0
 
@@ -39,6 +44,15 @@ class AssetIdentifier(C.Structure):
         ("Ticker",C.c_void_p),
         ("Exchange",C.c_void_p),
         ("FeedType",C.c_ubyte),
+    ]
+
+class ConnectorAccountIdentifierOut(C.Structure):
+    _fields_=[
+        ("Version",C.c_ubyte),
+        ("BrokerID",C.c_int),
+        ("AccountID",C.c_wchar_p),
+        ("SubAccountID",C.c_wchar_p),
+        ("Reserved",C.c_longlong),
     ]
 
 class ConnectorTrade(C.Structure):
@@ -60,7 +74,7 @@ TradeCallback=CALLBACK(None,AssetIdentifier,C.c_size_t,C.c_uint)
 dll=C.WinDLL(DLL_PATH) if os.name=="nt" else C.CDLL(DLL_PATH)
 events=queue.Queue(maxsize=500000)
 ticks=defaultdict(lambda:deque(maxlen=50000))
-states={LOGIN:None,MARKET:None,ACTIVATION:None}
+states={LOGIN:None,ROUTING:None,MARKET:None,ACTIVATION:None}
 ready_event=threading.Event()
 
 def ptr_to_wstr(ptr):
@@ -74,6 +88,18 @@ def configure_signatures():
         StateCallback,opt,opt,opt,opt,opt,opt,opt
     ]
     dll.DLLInitializeMarketLogin.restype=C.c_int
+    if hasattr(dll,"DLLInitializeLogin"):
+        dll.DLLInitializeLogin.argtypes=[
+            C.c_wchar_p,C.c_wchar_p,C.c_wchar_p,
+            StateCallback,opt,opt,opt,opt,opt,opt,opt,opt,opt,opt
+        ]
+        dll.DLLInitializeLogin.restype=C.c_int
+    if hasattr(dll,"GetAccountCount"):
+        dll.GetAccountCount.argtypes=[]
+        dll.GetAccountCount.restype=C.c_int
+    if hasattr(dll,"GetAccounts"):
+        dll.GetAccounts.argtypes=[C.c_int,C.c_int,C.c_int,C.POINTER(ConnectorAccountIdentifierOut)]
+        dll.GetAccounts.restype=C.c_int
     dll.SetTradeCallbackV2.argtypes=[TradeCallback]
     dll.SetTradeCallbackV2.restype=C.c_int
     dll.TranslateTrade.argtypes=[C.c_size_t,C.POINTER(ConnectorTrade)]
@@ -86,7 +112,9 @@ def configure_signatures():
     dll.DLLFinalize.restype=C.c_int
 
 def check_ready():
-    if states.get(LOGIN)==LOGIN_CONNECTED and states.get(MARKET)==MARKET_CONNECTED and states.get(ACTIVATION)==ACTIVATION_VALID:
+    base=states.get(LOGIN)==LOGIN_CONNECTED and states.get(MARKET)==MARKET_CONNECTED and states.get(ACTIVATION)==ACTIVATION_VALID
+    routing_ok=(not ROUTING_ENABLED) or states.get(ROUTING)==ROUTING_BROKER_CONNECTED
+    if base and routing_ok:
         ready_event.set()
     else:
         ready_event.clear()
@@ -129,6 +157,38 @@ def trade_callback(asset,p_trade,flags):
         pass
 
 _callbacks=[state_callback,trade_callback]
+
+
+def discover_routing_accounts():
+    if not ROUTING_ENABLED:
+        return []
+    if not hasattr(dll,"GetAccountCount") or not hasattr(dll,"GetAccounts"):
+        print("ROTEAMENTO: ProfitDLL sem GetAccountCount/GetAccounts disponíveis.")
+        return []
+    total=int(dll.GetAccountCount())
+    if total<=0:
+        print("ROTEAMENTO: nenhuma conta disponível.")
+        return []
+    rows=(ConnectorAccountIdentifierOut*total)()
+    for row in rows:
+        row.Version=0
+    ret=dll.GetAccounts(0,0,total,rows)
+    if ret!=NL_OK:
+        print("ROTEAMENTO: GetAccounts falhou:",ret)
+        return []
+    accounts=[]
+    for row in rows:
+        item={
+            "brokerId":int(row.BrokerID),
+            "accountId":str(row.AccountID or ""),
+            "subAccountId":str(row.SubAccountID or "")
+        }
+        accounts.append(item)
+        print("ROTEAMENTO CONTA",item["brokerId"],item["accountId"],item["subAccountId"] or "-")
+    if ROUTING_ACCOUNT_HINT or ROUTING_BROKER_HINT:
+        selected=[a for a in accounts if (not ROUTING_ACCOUNT_HINT or a["accountId"]==ROUTING_ACCOUNT_HINT) and (not ROUTING_BROKER_HINT or a["brokerId"]==ROUTING_BROKER_HINT)]
+        print("ROTEAMENTO SELECIONADO",selected[0] if selected else "nenhuma conta bateu com PROFIT_ACCOUNT_ID/PROFIT_BROKER_ID")
+    return accounts
 
 def parse_tickers():
     out=[]
@@ -273,17 +333,27 @@ def initialize():
     if not ACTIVATION_KEY or not NELOGICA_USER or not NELOGICA_PASSWORD:
         raise RuntimeError("Configure PROFIT_ACTIVATION_KEY, PROFIT_USER e PROFIT_PASSWORD.")
     configure_signatures()
-    ret=dll.DLLInitializeMarketLogin(
-        ACTIVATION_KEY,NELOGICA_USER,NELOGICA_PASSWORD,
-        state_callback,None,None,None,None,None,None,None
-    )
+    if ROUTING_ENABLED:
+        if not hasattr(dll,"DLLInitializeLogin"):
+            raise RuntimeError("Esta ProfitDLL não possui DLLInitializeLogin. Atualize a DLL pelo portal Nelogica.")
+        ret=dll.DLLInitializeLogin(
+            ACTIVATION_KEY,NELOGICA_USER,NELOGICA_PASSWORD,
+            state_callback,None,None,None,None,None,None,None,None,None,None
+        )
+    else:
+        ret=dll.DLLInitializeMarketLogin(
+            ACTIVATION_KEY,NELOGICA_USER,NELOGICA_PASSWORD,
+            state_callback,None,None,None,None,None,None,None
+        )
     if ret!=NL_OK:
-        raise RuntimeError(f"DLLInitializeMarketLogin falhou: {ret}")
+        raise RuntimeError(f"Inicialização ProfitDLL falhou: {ret}")
     ret=dll.SetTradeCallbackV2(trade_callback)
     if ret!=NL_OK:
         raise RuntimeError(f"SetTradeCallbackV2 falhou: {ret}")
     if not ready_event.wait(30):
         raise TimeoutError(f"ProfitDLL não ficou pronta em 30s. Estados: {states}")
+    if ROUTING_ENABLED:
+        discover_routing_accounts()
     for ticker,exchange in parse_tickers():
         ret=dll.SubscribeTicker(ticker,exchange)
         if ret!=NL_OK:
