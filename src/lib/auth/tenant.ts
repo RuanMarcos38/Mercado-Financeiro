@@ -16,22 +16,25 @@ export async function getTenantContext():Promise<TenantContext|null>{
 
   const {data:membership,error}=await supabase
     .from("tenant_memberships")
-    .select("tenant_id,role,tenants(name),profiles!tenant_memberships_user_id_fkey(display_name)")
+    .select("tenant_id,role")
     .eq("user_id",user.id)
     .eq("active",true)
     .limit(1)
     .maybeSingle();
 
   if(error||!membership)return null;
-  const tenant=Array.isArray((membership as any).tenants)?(membership as any).tenants[0]:(membership as any).tenants;
-  const profile=Array.isArray((membership as any).profiles)?(membership as any).profiles[0]:(membership as any).profiles;
+
+  const [{data:tenant},{data:profile}]=await Promise.all([
+    supabase.from("tenants").select("name").eq("id",membership.tenant_id).maybeSingle(),
+    supabase.from("profiles").select("display_name").eq("id",user.id).maybeSingle()
+  ]);
 
   return {
     userId:user.id,
     email:user.email??null,
-    tenantId:(membership as any).tenant_id,
+    tenantId:membership.tenant_id,
     tenantName:tenant?.name??"Empresa",
-    role:(membership as any).role,
+    role:membership.role as TenantContext["role"],
     displayName:profile?.display_name??user.user_metadata?.display_name??null
   };
 }
