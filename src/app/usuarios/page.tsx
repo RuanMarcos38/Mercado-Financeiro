@@ -12,6 +12,11 @@ export default function UsuariosPage(){
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
   const [role,setRole]=useState("trader");
+  const [companyName,setCompanyName]=useState("");
+  const [companyOwnerName,setCompanyOwnerName]=useState("");
+  const [companyEmail,setCompanyEmail]=useState("");
+  const [companyPassword,setCompanyPassword]=useState("");
+  const [companyMessage,setCompanyMessage]=useState("");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
 
@@ -30,6 +35,27 @@ export default function UsuariosPage(){
       const j=await r.json();if(!r.ok)throw new Error(j.error||"Falha ao criar");
       setName("");setEmail("");setPassword("");setRole("trader");await load();
     }catch(e){setError(e instanceof Error?e.message:"Falha");}
+    finally{setBusy(false);}
+  }
+
+  async function createCompany(e:FormEvent){
+    e.preventDefault();setBusy(true);setError("");setCompanyMessage("");
+    try{
+      const r=await fetch("/api/companies",{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({
+          companyName,
+          ownerName:companyOwnerName,
+          email:companyEmail,
+          password:companyPassword
+        })
+      });
+      const j=await r.json();
+      if(!r.ok)throw new Error(j.error||"Falha ao criar empresa");
+      setCompanyMessage("Empresa criada com acesso isolado.");
+      setCompanyName("");setCompanyOwnerName("");setCompanyEmail("");setCompanyPassword("");
+    }catch(e){setError(e instanceof Error?e.message:"Falha ao criar empresa");}
     finally{setBusy(false);}
   }
 
@@ -62,13 +88,27 @@ export default function UsuariosPage(){
 
       <aside className="usersPanel">
         <div className="fxPanelHead"><div><h2>Novo usuário</h2><p>Crie login e senha somente para esta empresa.</p></div><Plus size={18}/></div>
-        {canManage?<form className="newUserForm" onSubmit={create}>
-          <label>Nome<input required value={name} onChange={e=>setName(e.target.value)}/></label>
-          <label>E-mail<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
-          <label>Senha temporária<input type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
-          <label>Perfil<select value={role} onChange={e=>setRole(e.target.value)}><option value="admin">Administrador</option><option value="trader">Trader</option><option value="viewer">Visualização</option></select></label>
-          <button disabled={busy}>{busy?"Criando...":"Criar usuário"}</button>
-        </form>:<div className="permissionBox"><ShieldCheck/><b>Acesso somente leitura</b><p>Seu perfil não possui permissão para criar usuários.</p></div>}
+        {canManage?<div className="userAdminForms">
+          <form className="newUserForm" onSubmit={create}>
+            <label>Nome<input required value={name} onChange={e=>setName(e.target.value)}/></label>
+            <label>E-mail<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
+            <label>Senha temporária<input type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
+            <label>Perfil<select value={role} onChange={e=>setRole(e.target.value)}><option value="admin">Administrador</option><option value="trader">Operador</option><option value="viewer">Visualização</option></select></label>
+            <button disabled={busy}>{busy?"Criando...":"Criar usuário"}</button>
+          </form>
+
+          <details className="companyCreateDetails">
+            <summary><Plus size={14}/> Nova empresa</summary>
+            <form className="newUserForm companyCreateForm" onSubmit={createCompany}>
+              <label>Empresa<input required value={companyName} onChange={e=>setCompanyName(e.target.value)}/></label>
+              <label>Responsável<input required value={companyOwnerName} onChange={e=>setCompanyOwnerName(e.target.value)}/></label>
+              <label>E-mail do responsável<input type="email" required value={companyEmail} onChange={e=>setCompanyEmail(e.target.value)}/></label>
+              <label>Senha temporária<input type="password" minLength={8} required value={companyPassword} onChange={e=>setCompanyPassword(e.target.value)}/></label>
+              <button disabled={busy}>{busy?"Criando...":"Criar empresa"}</button>
+              {companyMessage&&<p className="companySuccess">{companyMessage}</p>}
+            </form>
+          </details>
+        </div>:<div className="permissionBox"><ShieldCheck/><b>Acesso somente leitura</b><p>Seu perfil não possui permissão para criar usuários.</p></div>}
       </aside>
     </section>
   </main>;
