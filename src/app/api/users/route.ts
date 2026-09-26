@@ -116,12 +116,14 @@ export async function POST(req:NextRequest){
       linked=true;
     }else{
       // Profile pode ter schema antigo ou novo; falha aqui não invalida o vínculo já criado.
-      await admin.from("profiles").upsert({
-        id:user.id,
-        tenant_id:ctx.tenantId,
-        role:role==="admin"?"admin":role,
-        display_name:name
-      }).then(()=>{}).catch(()=>{});
+      try{
+        await admin.from("profiles").upsert({
+          id:user.id,
+          tenant_id:ctx.tenantId,
+          role:role==="admin"?"admin":role,
+          display_name:name
+        });
+      }catch{}
     }
 
     try{
