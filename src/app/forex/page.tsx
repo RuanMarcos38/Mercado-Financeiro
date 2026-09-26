@@ -50,10 +50,10 @@ export default function ForexPage(){
           }
         }else{
           setLive(null);
-          setError(j.error||"Aguardando stream real deste ativo/timeframe.");
+          setError(j.error||"Aguardando dados reais deste ativo/período.");
         }
       }catch{
-        if(!stop)setError("Reconectando ao feed...");
+        if(!stop)setError("Reconectando aos dados...");
       }
     }
     refresh();
@@ -74,7 +74,7 @@ export default function ForexPage(){
       const r=await fetch("/api/forex/backtest",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pair:selected,timeframe,provider:"auto"})});
       const j=await r.json();
       if(r.ok&&j.ready!==false)setBacktest(j);
-      else setError(j.message||j.error||"Backtest aguardando histórico.");
+      else setError(j.message||j.error||"Teste histórico aguardando dados.");
     }finally{setBusy(false);}
   }
 
@@ -84,10 +84,10 @@ export default function ForexPage(){
 
   return <main className="fxPage">
     <header className="fxTop">
-      <div><a href="/" className="fxBack"><ChevronLeft size={14}/> Dashboard</a><h1>Forex Intelligence</h1></div>
+      <div><a href="/" className="fxBack"><ChevronLeft size={14}/> Painel</a><h1>Inteligência Forex</h1></div>
       <div className="welcomeActions">
         <button className="softAction" onClick={enableAlerts}><Bell size={14}/> Ativar alertas</button>
-        <span className={"liveFeedBadge "+(live?"online":"offline")}><i/>{live?("ONLINE · "+live.source.toUpperCase()):"AGUARDANDO FEED"}</span>
+        <span className={"liveFeedBadge "+(live?"online":"offline")}><i/>{live?("CONECTADO · "+live.source.toUpperCase()):"AGUARDANDO DADOS"}</span>
       </div>
     </header>
 
@@ -105,7 +105,7 @@ export default function ForexPage(){
     <section className="tradeWorkspace">
       <article className="fxPanel chartPanel">
         <div className="chartTopbar">
-          <div><span className="chartSymbol">{selected}</span><span className="chartPrice">{live?.bid?live.bid.toFixed(5):"—"}</span><small>{live?(live.source.toUpperCase()+" · "+age+"s atrás"):"sem stream"}</small></div>
+          <div><span className="chartSymbol">{selected}</span><span className="chartPrice">{live?.bid?live.bid.toFixed(5):"—"}</span><small>{live?(live.source.toUpperCase()+" · "+age+"s atrás"):"sem dados"}</small></div>
           <div className="tfSwitch">{TFS.map(tf=><button key={tf} className={timeframe===tf?"active":""} onClick={()=>setTimeframe(tf)}>{tf}</button>)}</div>
         </div>
         {live?.series?.length?<LiveCandleChart candles={live.series} signal={live?.candidate??null}/>:<div className="chartEmpty"><Activity/><b>Aguardando candles reais</b><span>MT5/Profit ainda não enviou {selected} em {timeframe}.</span></div>}
@@ -129,7 +129,7 @@ export default function ForexPage(){
        :"Sem direção confirmada neste momento."
 }</span></div></div>
         {live?.verifiedPerformance?.accuracyClaimAllowed&&<div className="verifiedAccuracy">Precisão verificada: <b>{live.verifiedPerformance.accuracyLabel}</b> · {live.verifiedPerformance.signals} sinais</div>}
-        <button className="backtestCompact" disabled={busy} onClick={runBacktest}><Zap size={14}/> Backtest deste setup</button>
+        <button className="backtestCompact" disabled={busy} onClick={runBacktest}><Zap size={14}/> Testar este cenário</button>
         {error&&<div className="fxInfoBox">{error}</div>}
       </aside>
     </section>
@@ -149,7 +149,7 @@ export default function ForexPage(){
           <div><span>ADX</span><b>{Number(live?.analysis?.snapshot?.adx14??0).toFixed(1)}</b></div>
           <div><span>Score</span><b>{live?.candidate?.score??live?.analysis?.signal?.score??"—"}</b></div>
           <div><span>Notícias</span><b>{live?.externalContext?Math.round((live.externalContext.newsRisk??0)*100)+"% risco":"—"}</b></div>
-          <div><span>Headlines</span><b>{live?.externalContext?.headlines??"—"}</b></div>
+          <div><span>Notícias</span><b>{live?.externalContext?.headlines??"—"}</b></div>
         </div>
         <div className="reasonCompact">{(live?.candidate?.reasons??live?.analysis?.signal?.reasons??[]).slice(0,5).map((x:string)=><p key={x}>• {x}</p>)}</div>
       </details>
@@ -159,9 +159,9 @@ export default function ForexPage(){
       <div className="fxPanelHead"><div><h2>Validação histórica</h2></div><ShieldCheck size={16}/></div>
       <div className="fxMetrics">
         <div><span>Sinais</span><strong>{backtest.signals}</strong></div>
-        <div><span>Win rate</span><strong>{backtest.winRate}%</strong></div>
-        <div><span>Profit Factor</span><strong>{backtest.profitFactor??"—"}</strong></div>
-        <div><span>Drawdown</span><strong>{backtest.maxDrawdownPct}%</strong></div>
+        <div><span>Taxa de acerto</span><strong>{backtest.winRate}%</strong></div>
+        <div><span>Fator de lucro</span><strong>{backtest.profitFactor??"—"}</strong></div>
+        <div><span>Perda máxima</span><strong>{backtest.maxPerda máximaPct}%</strong></div>
       </div>
     </section>}
   </main>;
