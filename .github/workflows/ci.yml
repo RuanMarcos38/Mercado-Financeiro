@@ -14,4 +14,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npm run test:smoke
+      - run: python -m py_compile connectors/mt5-bridge/bridge.py connectors/profit-bridge/bridge.py
       - run: npm run build
