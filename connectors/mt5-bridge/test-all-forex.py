@@ -10,6 +10,14 @@ LOGIN=os.getenv("MT5_LOGIN","").strip()
 PASSWORD=os.getenv("MT5_PASSWORD","")
 SERVER=os.getenv("MT5_SERVER","").strip()
 
+FIAT_CODES={
+    "USD","EUR","GBP","JPY","CHF","AUD","CAD","NZD","BRL","MXN","ZAR","TRY","PLN","CZK","HUF",
+    "SEK","NOK","DKK","SGD","HKD","CNH","CNY","INR","KRW","THB","IDR","ILS","SAR","AED","CLP",
+    "COP","PEN","TWD","PHP","MYR","RON","BGN","RUB","UAH","KZT","QAR","KWD","BHD","OMR","JOD",
+    "EGP","MAD","TND","PKR","BDT","LKR","VND","NGN","KES","GHS","UGX","TZS","ZMW","BWP","MUR",
+    "ISK","RSD","GEL","AMD","AZN","UZS","MNT"
+}
+
 TF={
     "1m":mt5.TIMEFRAME_M1,
     "5m":mt5.TIMEFRAME_M5,
@@ -33,7 +41,7 @@ def forex_symbols():
     for info in (mt5.symbols_get() or []):
         base=str(getattr(info,"currency_base","") or "").upper()
         quote=str(getattr(info,"currency_profit","") or "").upper()
-        if len(base)==3 and len(quote)==3 and base.isalpha() and quote.isalpha() and base!=quote:
+        if base in FIAT_CODES and quote in FIAT_CODES and base!=quote:
             rows.append((base+"/"+quote,info.name))
     seen=set();out=[]
     for pair,name in sorted(rows):
