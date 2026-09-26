@@ -3,7 +3,7 @@ import type { Candle } from "@/lib/market/types";
 import { parseCandlesCsv } from "@/lib/candle-import";
 import { getOandaCandles,getTwelveDataCandles } from "@/lib/forex/providers";
 import { backtestForex } from "@/lib/forex/backtest";
-import { getMarketStream } from "@/lib/connectors/market-stream";
+import { getMarketStream,getBestMarketStream } from "@/lib/connectors/market-stream";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
 import { recordVerifiedPerformance } from "@/lib/performance/verified";
 
@@ -22,8 +22,8 @@ export async function POST(req:NextRequest){
     if(provider==="auto"){
       const tenant=await resolveRequestTenant(req);
       if(tenant){
-        const stream=getMarketStream(tenant.tenantId,"mt5",pair,timeframe);
-        if(stream&&stream.candles.length>=200){candles=stream.candles;provider="mt5";}
+        const stream=getBestMarketStream(tenant.tenantId,pair,timeframe);
+        if(stream&&stream.candles.length>=200){candles=stream.candles;provider=stream.source;}
       }
       if(!candles.length&&process.env.OANDA_API_TOKEN){candles=await getOandaCandles(pair,timeframe,1500);provider="oanda";}
       if(!candles.length&&process.env.TWELVE_DATA_API_KEY){candles=await getTwelveDataCandles(pair,timeframe,1500);provider="twelvedata";}
@@ -46,7 +46,8 @@ export async function POST(req:NextRequest){
     const verified=recordVerifiedPerformance({
       symbol:pair,timeframe,provider,
       signals:result.signals,winRate:result.winRate,
-      profitFactor:result.profitFactor,maxDrawdownPct:result.maxDrawdownPct
+      profitFactor:result.profitFactor,maxDrawdownPct:result.maxDrawdownPct,
+      validationType:"backtest"
     });
     return NextResponse.json({ok:true,ready:true,pair,timeframe,provider,candles:candles.length,...result,verifiedPerformance:verified});
   }catch(error){
