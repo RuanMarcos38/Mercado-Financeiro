@@ -29,10 +29,13 @@ export async function GET(req:NextRequest){
   }
 
   try{
-    const isForex=stream.source==="mt5"||String(stream.meta?.assetClass??"").toLowerCase()==="forex"||symbol.includes("/");
-    const analysis=isForex
-      ?analyzeForex(stream.candles,{sourceQuality:"licensed",newsRisk:.15})
-      :analyzeCandles(stream.candles,{sourceQuality:"licensed",newsRisk:.15});
+    const professionalConnector=stream.source==="mt5"||stream.source==="profit";
+    const isForex=String(stream.meta?.assetClass??"").toLowerCase()==="forex"||symbol.includes("/");
+    const external=(stream.meta?.externalContext??{}) as any;
+    const newsRisk=Number.isFinite(Number(external.newsRisk))?Number(external.newsRisk):.15;
+    const analysis=(professionalConnector||isForex)
+      ?analyzeForex(stream.candles,{sourceQuality:"licensed",newsRisk})
+      :analyzeCandles(stream.candles,{sourceQuality:"licensed",newsRisk});
 
     const candidate=getCandidates(tenant.tenantId).find(
       x=>x.source===stream.source&&x.symbol===symbol&&x.timeframe===timeframe
@@ -47,6 +50,7 @@ export async function GET(req:NextRequest){
       candleCount:stream.candles.length,
       series:stream.candles.slice(-300),
       candidate,
+      externalContext:stream.meta?.externalContext??null,
       analysis
     });
   }catch(error){
