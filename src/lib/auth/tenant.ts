@@ -99,12 +99,14 @@ async function bootstrapMembership(user:{id:string;email?:string|null;user_metad
     }
 
     // Upsert compatível quando profiles ainda possui tenant_id/role.
-    await admin.from("profiles").upsert({
-      id:user.id,
-      tenant_id:tenant.id,
-      role:"admin",
-      display_name:user.user_metadata?.display_name??user.email?.split("@")[0]??"Administrador"
-    }).then(()=>{}).catch(()=>{});
+    try{
+      await admin.from("profiles").upsert({
+        id:user.id,
+        tenant_id:tenant.id,
+        role:"admin",
+        display_name:user.user_metadata?.display_name??user.email?.split("@")[0]??"Administrador"
+      });
+    }catch{}
 
     return {
       tenantId:String(tenant.id),
