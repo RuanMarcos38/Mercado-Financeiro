@@ -47,16 +47,22 @@ for(const [name,needle] of chartControls)check("Gráfico: "+name,chart.includes(
 
 // Radar
 check("Radar: atualizar",auto.includes("load"));
-check("Radar: modo desligado",auto.includes('setMode("off")'));
-check("Radar: simulação",auto.includes('setMode("paper")'));
-check("Radar: operação real",auto.includes('setMode("live")'));
+check("Radar: modo desligado",auto.includes('save({mode:"off"})'));
+check("Radar: simulação",auto.includes('save({mode:"paper"})'));
+check("Radar: operação real",auto.includes('save({mode:"live"})'));
 check("Radar: tabela de oportunidades",auto.includes("Radar de oportunidades"));
+for(const card of ["Oportunidades aptas","Modo atual","Confiança mínima","Alertas"]){
+  check("Radar card: "+card,auto.includes(card));
+}
 
 // Integrations
 check("Integrações: atualizar",integrations.includes("onClick={load}"));
 check("Integrações: chaves",integrations.includes('href="/integracoes/chaves"'));
 check("Integrações: MT5",integrations.includes("MetaTrader 5"));
 check("Integrações: Profit",integrations.includes("Profit"));
+for(const card of ["MetaTrader 5","Profit","Conexão Segura"]){
+  check("Integrações card: "+card,integrations.includes(card));
+}
 
 // Settings navigation
 for(const [name,path] of [
@@ -76,6 +82,8 @@ check("Usuários: alterar perfil",users.includes("role:e.target.value"));
 check("Alertas: salvar",alerts.includes("onSubmit={save}"));
 check("Alertas: WhatsApp",alerts.includes("whatsapp_enabled"));
 check("Alertas: navegador",alerts.includes("browser_enabled"));
+check("Alertas card: WhatsApp",alerts.includes("<h2>WhatsApp</h2>"));
+check("Alertas card: Critério",alerts.includes("<h2>Critério</h2>"));
 
 // API/route existence used by UI
 for(const p of [
