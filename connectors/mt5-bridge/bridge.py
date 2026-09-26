@@ -37,6 +37,13 @@ FOREX_CATALOG_AT=0
 WATCHLIST_CACHE=[]
 WATCHLIST_AT=0
 FULL_SCAN_CURSOR=0
+FIAT_CODES={
+    "USD","EUR","GBP","JPY","CHF","AUD","CAD","NZD","BRL","MXN","ZAR","TRY","PLN","CZK","HUF",
+    "SEK","NOK","DKK","SGD","HKD","CNH","CNY","INR","KRW","THB","IDR","ILS","SAR","AED","CLP",
+    "COP","PEN","TWD","PHP","MYR","RON","BGN","RUB","UAH","KZT","QAR","KWD","BHD","OMR","JOD",
+    "EGP","MAD","TND","PKR","BDT","LKR","VND","NGN","KES","GHS","UGX","TZS","ZMW","BWP","MUR",
+    "ISK","RSD","GEL","AMD","AZN","UZS","MNT"
+}
 FULL_SCAN_QUEUE=[]
 FULL_SCAN_QUEUE_AT=0
 CATALOG_SENT_AT=0
@@ -127,8 +134,7 @@ def discover_forex_catalog(force=False):
         quote=str(getattr(info,"currency_profit","") or "").upper()
         if len(base)!=3 or len(quote)!=3 or base==quote:
             continue
-        # Currency pairs only. Metals/CFDs normally use non-currency base codes.
-        if not base.isalpha() or not quote.isalpha():
+        if base not in FIAT_CODES or quote not in FIAT_CODES:
             continue
         pair=base+"/"+quote
         key=(pair,info.name)
