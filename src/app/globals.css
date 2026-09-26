@@ -438,3 +438,48 @@ img,svg,canvas{max-width:100%}
   .topRight .roundButton{display:none}
   .chartToolButtons button{min-width:40px;justify-content:center}
 }
+
+/* Idioma global */
+.globalLanguage{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  z-index:80;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:38px;
+  padding:7px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 8px 24px rgba(28,43,72,.12);
+  backdrop-filter:blur(10px);
+  color:#65748a;
+}
+.globalLanguage svg{flex:0 0 auto;color:var(--blue)}
+.globalLanguage .goog-te-gadget{font-size:0!important;color:transparent!important}
+.globalLanguage .goog-te-combo{
+  margin:0!important;
+  border:0!important;
+  outline:0!important;
+  background:transparent!important;
+  color:#536176!important;
+  font-size:11px!important;
+  font-family:inherit!important;
+  cursor:pointer;
+  max-width:170px;
+}
+.globalLanguage .goog-logo-link,.globalLanguage .goog-te-gadget span{display:none!important}
+@media(max-width:768px){
+  .globalLanguage{
+    bottom:72px;
+    right:10px;
+    min-height:34px;
+    padding:6px 8px;
+  }
+  .globalLanguage .goog-te-combo{max-width:130px;font-size:10px!important}
+}
+
+/* Tela de integrações sem instruções internas */
+.integrationHow,.integrationWarning:empty{display:none!important}
