@@ -163,6 +163,25 @@ def aggregate_1m(symbol):
         b["volume"]+=t["qty"]
     return list(sorted(buckets.values(),key=lambda x:x["time"]))[-1000:]
 
+def aggregate_from_1m(candles,minutes):
+    if minutes<=1:return candles
+    buckets={}
+    for c in candles:
+        dt=datetime.fromisoformat(c["time"])
+        minute=(dt.minute//minutes)*minutes
+        dt=dt.replace(minute=minute,second=0,microsecond=0)
+        key=dt.isoformat()
+        b=buckets.setdefault(key,{
+            "symbol":c["symbol"],"timeframe":f"{minutes}m","time":key,
+            "open":c["open"],"high":c["high"],"low":c["low"],"close":c["close"],
+            "volume":0.0,"source":"profit"
+        })
+        b["high"]=max(b["high"],c["high"])
+        b["low"]=min(b["low"],c["low"])
+        b["close"]=c["close"]
+        b["volume"]+=c["volume"]
+    return list(sorted(buckets.values(),key=lambda x:x["time"]))[-1000:]
+
 def headers():
     h={"content-type":"application/json"}
     if INGEST_KEY:h["x-connector-key"]=INGEST_KEY
@@ -215,26 +234,33 @@ def push_all():
     while True:
         if ready_event.is_set():
             for ticker,exchange in parse_tickers():
-                candles=aggregate_1m(ticker)
-                if len(candles)<2: continue
-                payload={
-                    "source":"profit",
-                    "symbol":ticker,
-                    "assetClass":"b3",
-                    "timeframe":"1m",
-                    "timestamp":datetime.now(timezone.utc).isoformat(),
-                    "candles":candles,
-                    "meta":{
-                        "terminal":"ProfitDLL",
-                        "exchange":exchange,
-                        "marketDataReady":True,
-                        "tradeCountBuffered":len(ticks[ticker])
-                    }
-                }
+                candles_1m=aggregate_1m(ticker)
+                if len(candles_1m)<2: continue
                 try:
-                    r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
-                    r.raise_for_status()
-                    print("push",ticker,r.json())
+                    for minutes in (1,5,15):
+                        candles=aggregate_from_1m(candles_1m,minutes)
+                        timeframe=f"{minutes}m"
+                        payload={
+                            "source":"profit",
+                            "symbol":ticker,
+                            "assetClass":"b3",
+                            "timeframe":timeframe,
+                            "timestamp":datetime.now(timezone.utc).isoformat(),
+                            "candles":candles,
+                            "meta":{
+                                "terminal":"ProfitDLL",
+                                "exchange":exchange,
+                                "marketDataReady":True,
+                                "tradeCountBuffered":len(ticks[ticker]),
+                                "derivedFrom":"trades"
+                            }
+                        }
+                        r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
+                        r.raise_for_status()
+                        j=r.json()
+                        decision=j.get("decision") or {}
+                        candidate=decision.get("candidate") or {}
+                        print("push",ticker,timeframe,j.get("candles"),"decisão",candidate.get("status"),candidate.get("side"),candidate.get("confidence"))
                     if os.getenv("PROFIT_FETCH_SIGNAL","1")=="1":
                         fetch_signal(ticker)
                     if os.getenv("PROFIT_FETCH_AUTOTRADE","1")=="1":
