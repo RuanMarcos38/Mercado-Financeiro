@@ -207,3 +207,234 @@ a{text-decoration:none;color:inherit}
   .chartToolButtons{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
   .chartToolButtons button{flex:0 0 auto}
 }
+
+/* =========================================================
+   RESPONSIVIDADE GLOBAL — desktop / tablet / mobile
+   Mantém a estrutura existente e apenas reorganiza o layout.
+   ========================================================= */
+
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,canvas{max-width:100%}
+.novaMain,.dashboardContent,.fxPage,.autoPage,.integrationPage,.usersPage,.settingsPage,.lab{min-width:0}
+.panel,.fxPanel,.autoPanel,.integrationPanel,.integrationCard,.usersPanel,.settingsCard{min-width:0}
+
+/* DESKTOP MENOR / NOTEBOOK */
+@media (max-width:1280px){
+  .novaShell{grid-template-columns:180px minmax(0,1fr)}
+  .novaSidebar{padding:18px 11px}
+  .novaNav a{padding:9px 9px;font-size:11px}
+  .dashboardContent,.fxPage,.autoPage,.integrationPage,.usersPage,.settingsPage{padding-left:18px;padding-right:18px}
+  .tradeWorkspace{grid-template-columns:minmax(0,1fr) 290px}
+  .fxPairTabs{grid-template-columns:repeat(5,minmax(90px,1fr))}
+  .integrationCards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* TABLET LANDSCAPE / TABLET GRANDE */
+@media (max-width:1024px){
+  .novaShell{grid-template-columns:72px minmax(0,1fr)}
+  .novaSidebar{padding:14px 8px}
+  .novaBrand{justify-content:center;padding:0 0 18px}
+  .novaBrand>div:last-child{display:none}
+  .novaNav a{justify-content:center;font-size:0;padding:11px 8px}
+  .novaNav svg{width:19px;height:19px}
+  .sidebarTrust{display:none}
+  .novaTopbar{padding:0 14px}
+  .globalSearch{width:min(360px,46vw)}
+  .userChip>div,.userChip>svg{display:none}
+
+  .dashboardContent,.fxPage,.autoPage,.integrationPage,.usersPage,.settingsPage{padding:16px}
+  .summaryGrid,.autoTopGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dashboardGrid,.autoGrid,.usersGrid{grid-template-columns:1fr}
+  .rightColumn{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lowerGrid,.fxBottomCompact,.integrationHow{grid-template-columns:1fr 1fr}
+  .tradeWorkspace{grid-template-columns:1fr}
+  .signalConsole{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+  .signalHeadline,.signalConfidence,.signalStatus,.backtestCompact,.verifiedAccuracy,.signalConsole>.fxInfoBox{grid-column:1/-1}
+  .signalLevels{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .fxPairTabs{grid-template-columns:repeat(4,minmax(90px,1fr))}
+  .integrationCards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settingsGrid,.settingsActions{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .riskGrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .fxMetrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* TABLET PORTRAIT / MOBILE GRANDE */
+@media (max-width:768px){
+  body{padding-bottom:66px}
+
+  .novaShell{display:block}
+  .novaMain{width:100%}
+
+  /* A mesma sidebar vira barra de navegação inferior */
+  .novaSidebar{
+    display:block;
+    position:fixed;
+    left:0;right:0;bottom:0;top:auto;
+    width:100%;height:64px;
+    padding:6px 8px;
+    border-right:0;border-top:1px solid var(--line);
+    background:rgba(255,255,255,.98);
+    backdrop-filter:blur(10px);
+    z-index:50;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+  .novaBrand,.sidebarTrust{display:none}
+  .novaNav{
+    display:flex;
+    gap:4px;
+    min-width:max-content;
+    height:100%;
+    align-items:center;
+  }
+  .novaNav a{
+    min-width:52px;
+    height:48px;
+    justify-content:center;
+    padding:7px 10px;
+    border-radius:9px;
+    font-size:0;
+    flex:0 0 auto;
+  }
+  .novaNav svg{width:20px;height:20px}
+
+  .novaTopbar{
+    position:sticky;
+    height:auto;
+    min-height:54px;
+    padding:8px 10px;
+    gap:8px;
+  }
+  .globalSearch{width:100%;min-width:0}
+  .topRight{margin-left:auto;gap:6px}
+  .syncBadge{display:none}
+  .roundButton{width:36px;height:36px;flex:0 0 36px}
+  .userChip{padding:0}
+  .userChip>span{width:34px;height:34px}
+
+  .dashboardContent,.fxPage,.autoPage,.integrationPage,.usersPage,.settingsPage,.lab{
+    padding:12px;
+    max-width:100%;
+  }
+
+  .welcomeRow,.fxTop,.autoHeader,.integrationHeader,.usersHeader{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .welcomeActions{width:100%;flex-wrap:wrap}
+  .welcomeActions .primaryAction,.welcomeActions .softAction,.refreshIntegration{min-height:40px}
+
+  .summaryGrid,.autoTopGrid,.fxSummary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rightColumn,.lowerGrid,.fxBottomCompact,.integrationHow,.settingsGrid,.settingsActions{grid-template-columns:1fr}
+  .dashboardGrid,.autoGrid,.usersGrid,.tradeWorkspace,.fxGrid,.fxMainGrid{grid-template-columns:1fr}
+
+  .chartTopbar{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+  .chartTopbar>div:first-child{justify-content:space-between}
+  .tfSwitch{width:100%;overflow-x:auto;padding-bottom:2px}
+  .tfSwitch button{min-width:48px;min-height:38px;flex:0 0 auto}
+  .liveCandleChart{min-height:300px}
+  .chartToolButtons button{min-height:36px;padding:7px 9px}
+  .chartToolButtons button span{font-size:8px}
+  .chartOhlc{font-size:7px;gap:6px}
+
+  .signalConsole{display:flex}
+  .signalLevels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bigSignal{font-size:24px}
+  .signalConfidence strong{font-size:18px}
+
+  .fxPairTabs{grid-template-columns:repeat(3,minmax(90px,1fr));max-height:260px}
+  .fxPanelHead{align-items:flex-start;flex-wrap:wrap}
+  .fxSearch{width:100%}
+  .fxSearch input{min-width:0;width:100%}
+
+  .integrationCards{grid-template-columns:1fr}
+  .integrationStats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .integrationTable,.usersTable,.autoTable,.novaTable{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .integrationTr{min-width:760px}
+  .usersTr{min-width:700px}
+  .autoTr{min-width:980px}
+  .autoTrReason{min-width:1180px}
+  .novaTr{min-width:720px}
+
+  .riskGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .modeButtons{overflow-x:auto;padding-bottom:2px}
+  .modeButtons button{min-height:40px;flex:0 0 auto}
+
+  .fxMetrics,.resultGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fxReasons{grid-template-columns:1fr}
+  .compactTechnical{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .macroRealGrid{grid-template-columns:1fr}
+  .labFormRow{grid-template-columns:1fr}
+  .labHead{display:block}
+
+  .usersPanel,.settingsCard,.integrationPanel,.integrationCard,.autoPanel,.fxPanel{padding:12px}
+  .newUserForm input,.newUserForm select,.authInput input{font-size:16px}
+}
+
+/* MOBILE */
+@media (max-width:520px){
+  body{padding-bottom:64px}
+  .dashboardContent,.fxPage,.autoPage,.integrationPage,.usersPage,.settingsPage,.lab{padding:9px}
+
+  .novaTopbar{padding:7px 9px}
+  .globalSearch{padding:8px 9px}
+  .globalSearch input{font-size:10px}
+
+  .welcomeRow h1,.fxTop h1,.autoHeader h1,.integrationHeader h1,.usersHeader h1{font-size:18px}
+  .summaryGrid,.autoTopGrid,.fxSummary{grid-template-columns:1fr 1fr;gap:7px}
+  .summaryCard,.autoStatusCard{padding:10px;min-height:88px}
+  .summaryCard>strong,.autoStatusCard>strong{font-size:18px}
+
+  .mainChartPanel,.marketTablePanel,.infoPanel{padding:10px}
+  .chartToolbar{display:block}
+  .timeframes,.marketFilters{overflow-x:auto;white-space:nowrap}
+  .timeframes button,.marketFilters button{min-height:36px}
+
+  .fxPanel,.autoPanel,.integrationPanel,.integrationCard,.usersPanel,.settingsCard{border-radius:9px}
+  .tradeWorkspace{gap:8px}
+  .chartPanel{padding:0}
+  .chartTopbar{padding:9px 10px}
+  .chartSymbol{font-size:13px}
+  .chartPrice{font-size:16px}
+  .liveCandleChart{min-height:280px}
+  .liveChartTools{padding:6px 8px}
+  .chartOhlc{width:100%;overflow-x:auto;white-space:nowrap;flex-wrap:nowrap}
+  .chartToolButtons{gap:3px}
+  .chartToolButtons button{min-height:38px;padding:7px 8px}
+  .chartToolButtons button span{display:none}
+  .chartToolButtons button[title="Ajustar gráfico"] span,
+  .chartToolButtons button[title="Ir para o candle mais recente"] span{display:inline}
+
+  .fxPairTabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compactMenu>summary,.technicalDetails>summary{min-height:44px;padding:11px 12px}
+
+  .signalLevels{grid-template-columns:1fr 1fr}
+  .signalLevels div{padding:8px}
+  .signalStatus{padding:9px}
+  .backtestCompact{min-height:42px}
+
+  .riskGrid{grid-template-columns:1fr 1fr}
+  .riskGrid label{padding:8px}
+  .modeButtons{gap:5px}
+
+  .integrationStats{gap:5px}
+  .integrationStats div{padding:7px}
+  .integrationHow{grid-template-columns:1fr}
+
+  .settingsActions a{min-height:48px}
+  .newUserForm button,.authSubmit{min-height:44px}
+
+  .fxMetrics,.resultGrid{grid-template-columns:1fr 1fr}
+}
+
+/* MOBILE PEQUENO */
+@media (max-width:380px){
+  .summaryGrid,.autoTopGrid,.fxSummary{grid-template-columns:1fr}
+  .signalLevels,.riskGrid,.fxMetrics,.resultGrid,.compactTechnical{grid-template-columns:1fr}
+  .fxPairTabs{grid-template-columns:1fr 1fr}
+  .welcomeActions{display:grid;grid-template-columns:1fr}
+  .welcomeActions>*{width:100%;justify-content:center}
+  .topRight .roundButton{display:none}
+  .chartToolButtons button{min-width:40px;justify-content:center}
+}
