@@ -94,3 +94,9 @@ export function listGlobalMarketStreams(){
 export function connectorStoreWarning(){
   return "Streams por empresa e Mercado Espelho central estão em memória. Para alta disponibilidade/múltiplas réplicas, persistir em Redis/Postgres.";
 }
+
+
+export function restoreMarketStreamState(state:StreamState){
+  store.set(key(state.tenantId,state.source,state.symbol,state.timeframe),state);
+  return state;
+}
