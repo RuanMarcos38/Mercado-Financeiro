@@ -27,12 +27,16 @@ MT5_PASSWORD=os.getenv("MT5_PASSWORD","")
 MT5_SERVER=os.getenv("MT5_SERVER","").strip()
 MT5_TIMEOUT=max(10000,int(os.getenv("MT5_TIMEOUT_MS","60000")))
 RECONNECT_SECONDS=max(2,int(os.getenv("MT5_RECONNECT_SECONDS","5")))
+STREAM_ALL_FOREX=os.getenv("MT5_STREAM_ALL_FOREX","1")=="1"
+FULL_SCAN_MAX_AGE=max(10,int(os.getenv("MT5_FULL_SCAN_MAX_AGE_SECONDS","20")))
+BATCH_MAX=max(10,min(80,int(os.getenv("MT5_BATCH_MAX","60"))))
 
 WARMED_STREAMS=set()
 FOREX_CATALOG_CACHE=[]
 FOREX_CATALOG_AT=0
 WATCHLIST_CACHE=[]
 WATCHLIST_AT=0
+FULL_SCAN_CURSOR=0
 
 TF={
     "M1":(mt5.TIMEFRAME_M1,"1m"),
@@ -172,6 +176,61 @@ def tf_name_from_output(tf_out):
     reverse={"1m":"M1","5m":"M5","10m":"M10","15m":"M15","1h":"H1","1d":"D1"}
     return reverse.get(tf_out,"M5")
 
+def build_full_scan_queue():
+    if not STREAM_ALL_FOREX:
+        return []
+    queue=[]
+    for item in discover_forex_catalog():
+        broker_symbol=item.get("brokerSymbol")
+        pair=item.get("symbol")
+        if not broker_symbol or not pair:
+            continue
+        if not mt5.symbol_select(broker_symbol,True):
+            continue
+        for tf_name in ["M1","M5","M10","H1"]:
+            queue.append((pair,broker_symbol,tf_name))
+    return queue
+
+def background_cycle_budget(total):
+    if total<=0:return 0
+    cycles=max(1,int(FULL_SCAN_MAX_AGE/max(1,INTERVAL_SECONDS)))
+    return max(1,min(BATCH_MAX,math.ceil(total/cycles)))
+
+def make_payload(symbol,tf_name,background=False):
+    tick=mt5.symbol_info_tick(symbol)
+    if tick is None:
+        raise RuntimeError(f"{symbol}: sem tick")
+    tf,tf_out=TF.get(tf_name,TF["M5"])
+    normalized=normalize_symbol(symbol)
+    candles_out=candles(symbol,tf,tf_out,BARS if (symbol,tf_out) not in WARMED_STREAMS else 3)
+    payload={
+        "source":"mt5","symbol":normalized,"assetClass":"forex","timeframe":tf_out,
+        "timestamp":datetime.now(timezone.utc).isoformat(),
+        "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
+        "candles":candles_out,
+        "meta":{
+            "terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex",
+            "autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name,
+            "availableForexPairs":discover_forex_catalog(),
+            "backgroundScan":bool(background)
+        }
+    }
+    WARMED_STREAMS.add((symbol,tf_out))
+    return payload
+
+def send_batch(items):
+    if not items:return
+    r=requests.post(
+        SAAS_URL+"/api/connectors/market-batch",
+        headers=headers(),
+        data=json.dumps({"items":items}),
+        timeout=max(20,5+len(items))
+    )
+    r.raise_for_status()
+    j=r.json()
+    print("BATCH",j.get("success",0),"/",j.get("processed",0),"streams",
+          "falhas",j.get("failed",0))
+
 def candles(symbol,tf,tf_out,limit=None):
     count=limit if limit is not None else BARS
     rates=mt5.copy_rates_from_pos(symbol,tf,0,count)
@@ -267,51 +326,32 @@ def poll_intent(symbol):
     except Exception as e: print("erro AutoTrade",normalized,e)
 
 def push(symbol,only_timeframes=None):
-    tick=mt5.symbol_info_tick(symbol)
-    if tick is None: raise RuntimeError(f"{symbol}: sem tick")
     selected_timeframes=only_timeframes or TIMEFRAME_NAMES
     for tf_name in selected_timeframes:
-        tf,tf_out=TF.get(tf_name,TF["M5"])
-        payload={
-            "source":"mt5","symbol":normalize_symbol(symbol),"assetClass":"forex","timeframe":tf_out,
-            "timestamp":datetime.now(timezone.utc).isoformat(),
-            "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
-            "candles":candles(symbol,tf,tf_out,BARS if (symbol,tf_out) not in WARMED_STREAMS else 3),
-            "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name,"availableForexPairs":discover_forex_catalog()}
-        }
+        payload=make_payload(symbol,tf_name,background=False)
         r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
         r.raise_for_status()
-        WARMED_STREAMS.add((symbol,tf_out))
         j=r.json()
         decision=j.get("decision") or {}
         candidate=decision.get("candidate") or {}
         print(symbol,tf_name,"push",j.get("candles"),"decisão",candidate.get("status"),candidate.get("side"),candidate.get("confidence"))
-        if os.getenv("MT5_FETCH_SIGNAL","1")=="1":fetch_signal(symbol,tf_out)
+        if os.getenv("MT5_FETCH_SIGNAL","1")=="1":fetch_signal(symbol,payload["timeframe"])
     if os.getenv("MT5_FETCH_AUTOTRADE","1")=="1":poll_intent(symbol)
 
 def main():
     init()
     try:
+        global FULL_SCAN_CURSOR
         while True:
             ensure_connection()
             processed=set()
 
-            for symbol in SYMBOLS:
-                try:
-                    if not mt5.symbol_select(symbol,True):
-                        print(symbol,"indisponível no terminal");continue
-                    push(symbol)
-                    for tf_name in TIMEFRAME_NAMES:
-                        processed.add((normalize_symbol(symbol),tf_name))
-                except Exception as e:print(symbol,"erro:",e)
-
+            # Prioridade 1: ativos/timeframes abertos pelos usuários.
             for item in fetch_dynamic_watchlist():
                 try:
                     pair=str(item.get("symbol") or "").upper()
                     tf_out=str(item.get("timeframe") or "5m")
                     tf_name=tf_name_from_output(tf_out)
-                    if (pair,tf_name) in processed:
-                        continue
                     broker_symbol=broker_symbol_for_pair(pair)
                     if not broker_symbol:
                         print("WATCHLIST",pair,"não disponível na corretora")
@@ -323,6 +363,39 @@ def main():
                     processed.add((pair,tf_name))
                 except Exception as e:
                     print("WATCHLIST erro item",item,e)
+
+            # Prioridade 2: símbolos fixos adicionais do .env.
+            for symbol in SYMBOLS:
+                try:
+                    if not mt5.symbol_select(symbol,True):
+                        continue
+                    pair=normalize_symbol(symbol)
+                    tfs=[tf for tf in TIMEFRAME_NAMES if (pair,tf) not in processed]
+                    if tfs:push(symbol,tfs)
+                    for tf_name in tfs:processed.add((pair,tf_name))
+                except Exception as e:
+                    print(symbol,"erro:",e)
+
+            # Cobertura total: todos os pares reais da corretora em 1m/5m/10m/1h.
+            if STREAM_ALL_FOREX:
+                queue=build_full_scan_queue()
+                total=len(queue)
+                budget=background_cycle_budget(total)
+                batch=[]
+                scanned=0
+                while total and scanned<budget:
+                    pair,broker_symbol,tf_name=queue[FULL_SCAN_CURSOR%total]
+                    FULL_SCAN_CURSOR=(FULL_SCAN_CURSOR+1)%total
+                    scanned+=1
+                    if (pair,tf_name) in processed:
+                        continue
+                    try:
+                        batch.append(make_payload(broker_symbol,tf_name,background=True))
+                        processed.add((pair,tf_name))
+                    except Exception as e:
+                        print("SCAN",pair,tf_name,"erro:",e)
+                for i in range(0,len(batch),BATCH_MAX):
+                    send_batch(batch[i:i+BATCH_MAX])
 
             time.sleep(INTERVAL_SECONDS)
     finally:mt5.shutdown()
