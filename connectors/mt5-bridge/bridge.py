@@ -29,6 +29,8 @@ MT5_TIMEOUT=max(10000,int(os.getenv("MT5_TIMEOUT_MS","60000")))
 RECONNECT_SECONDS=max(2,int(os.getenv("MT5_RECONNECT_SECONDS","5")))
 
 WARMED_STREAMS=set()
+FOREX_CATALOG_CACHE=[]
+FOREX_CATALOG_AT=0
 
 TF={
     "M1":(mt5.TIMEFRAME_M1,"1m"),
@@ -70,6 +72,7 @@ def init():
     info=mt5.terminal_info()
     print("MT5 conectado:",bool(info))
     print("Conta:",acct.login if acct else None,"Servidor:",acct.server if acct else None,"AutoTrade local:",AUTOTRADE_LIVE)
+    discover_forex_catalog(force=True)
 
 def ensure_connection():
     info=mt5.terminal_info()
@@ -93,8 +96,47 @@ def ensure_connection():
 
 def normalize_symbol(s):
     if "/" in s:return s
+    info=mt5.symbol_info(s)
+    if info:
+        base=str(getattr(info,"currency_base","") or "").upper()
+        quote=str(getattr(info,"currency_profit","") or "").upper()
+        if len(base)==3 and len(quote)==3 and base!=quote:
+            return base+"/"+quote
     if len(s)>=6:return s[:3]+"/"+s[3:6]
     return s
+
+def discover_forex_catalog(force=False):
+    global FOREX_CATALOG_CACHE,FOREX_CATALOG_AT
+    now=time.time()
+    if FOREX_CATALOG_CACHE and not force and now-FOREX_CATALOG_AT<300:
+        return FOREX_CATALOG_CACHE
+    rows=[]
+    seen=set()
+    for info in (mt5.symbols_get() or []):
+        base=str(getattr(info,"currency_base","") or "").upper()
+        quote=str(getattr(info,"currency_profit","") or "").upper()
+        if len(base)!=3 or len(quote)!=3 or base==quote:
+            continue
+        # Currency pairs only. Metals/CFDs normally use non-currency base codes.
+        if not base.isalpha() or not quote.isalpha():
+            continue
+        pair=base+"/"+quote
+        key=(pair,info.name)
+        if key in seen:continue
+        seen.add(key)
+        rows.append({
+            "symbol":pair,
+            "brokerSymbol":info.name,
+            "base":base,
+            "quote":quote,
+            "visible":bool(getattr(info,"visible",False)),
+            "selectable":bool(getattr(info,"select",False) or getattr(info,"visible",False))
+        })
+    rows.sort(key=lambda x:(x["symbol"],x["brokerSymbol"]))
+    FOREX_CATALOG_CACHE=rows
+    FOREX_CATALOG_AT=now
+    print("FOREX CATALOGO MT5",len(rows),"instrumentos")
+    return rows
 
 def original_symbol(normalized):
     return normalized.replace("/","")
@@ -203,7 +245,7 @@ def push(symbol):
             "timestamp":datetime.now(timezone.utc).isoformat(),
             "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
             "candles":candles(symbol,tf,tf_out,BARS if (symbol,tf_out) not in WARMED_STREAMS else 3),
-            "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name}
+            "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name,"availableForexPairs":discover_forex_catalog()}
         }
         r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
         r.raise_for_status()
