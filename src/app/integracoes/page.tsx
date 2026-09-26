@@ -26,8 +26,8 @@ type Status={
 
 function age(sec:number){
   if(sec<60)return sec+"s";
-  if(sec<3600)return Math.floor(sec/60)+"m";
-  return Math.floor(sec/3600)+"h";
+  if(sec<3600)return Math.floor(sec/60)+" min";
+  return Math.floor(sec/3600)+" h";
 }
 
 export default function IntegracoesPage(){
@@ -39,7 +39,7 @@ export default function IntegracoesPage(){
     try{
       const r=await fetch("/api/connectors/status",{cache:"no-store"});
       const j=await r.json();
-      if(!r.ok)throw new Error(j.error||"Falha");
+      if(!r.ok)throw new Error(j.error||"Falha ao carregar");
       setStatus(j);setError("");
     }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar");}
     finally{setLoading(false);}
@@ -59,11 +59,13 @@ export default function IntegracoesPage(){
   return <main className="integrationPage">
     <header className="integrationHeader">
       <div>
-        <a className="fxBack" href="/"><ChevronLeft size={14}/> Dashboard</a>
+        <a className="fxBack" href="/"><ChevronLeft size={14}/> Painel</a>
         <h1>Integrações de Mercado</h1>
-        <p>MetaTrader 5 e Profit alimentando o mesmo motor de análise do SaaS.</p>
       </div>
-      <div className="welcomeActions"><a className="softAction" href="/integracoes/chaves"><ShieldCheck size={15}/> Chaves da empresa</a><button className="refreshIntegration" onClick={load}><RefreshCw size={15}/> Atualizar</button></div>
+      <div className="welcomeActions">
+        <a className="softAction" href="/integracoes/chaves"><ShieldCheck size={15}/> Chaves</a>
+        <button className="refreshIntegration" onClick={load}><RefreshCw size={15}/> Atualizar</button>
+      </div>
     </header>
 
     {error&&<div className="realDataError">{error}</div>}
@@ -72,90 +74,62 @@ export default function IntegracoesPage(){
       <article className={"integrationCard "+(mt5Online?"online":"offline")}>
         <div className="integrationCardTop">
           <div className="integrationIcon"><MonitorSmartphone/></div>
-          <span className="integrationState">{mt5Online?<><Wifi/> ONLINE</>:<><WifiOff/> AGUARDANDO</>}</span>
+          <span className="integrationState">{mt5Online?<><Wifi/> CONECTADO</>:<><WifiOff/> AGUARDANDO</>}</span>
         </div>
         <h2>MetaTrader 5</h2>
-        <p>Forex/CFD via terminal local e biblioteca oficial MetaTrader5 para Python.</p>
         <div className="integrationStats">
-          <div><span>Streams</span><b>{mt5.length}</b></div>
-          <div><span>Online</span><b>{mt5.filter(s=>s.online).length}</b></div>
-          <div><span>Último push</span><b>{mt5[0]?age(mt5[0].ageSeconds):"—"}</b></div>
+          <div><span>Fluxos</span><b>{mt5.length}</b></div>
+          <div><span>Conectados</span><b>{mt5.filter(s=>s.online).length}</b></div>
+          <div><span>Último envio</span><b>{mt5[0]?age(mt5[0].ageSeconds):"—"}</b></div>
         </div>
       </article>
 
       <article className={"integrationCard "+(profitOnline?"online":"offline")}>
         <div className="integrationCardTop">
           <div className="integrationIcon"><Activity/></div>
-          <span className="integrationState">{profitOnline?<><Wifi/> ONLINE</>:<><WifiOff/> AGUARDANDO</>}</span>
+          <span className="integrationState">{profitOnline?<><Wifi/> CONECTADO</>:<><WifiOff/> AGUARDANDO</>}</span>
         </div>
-        <h2>Profit / ProfitDLL</h2>
-        <p>B3 via ProfitDLL oficial, trades tick a tick consolidados em candles para análise.</p>
+        <h2>Profit</h2>
         <div className="integrationStats">
-          <div><span>Streams</span><b>{profit.length}</b></div>
-          <div><span>Online</span><b>{profit.filter(s=>s.online).length}</b></div>
-          <div><span>Último push</span><b>{profit[0]?age(profit[0].ageSeconds):"—"}</b></div>
+          <div><span>Fluxos</span><b>{profit.length}</b></div>
+          <div><span>Conectados</span><b>{profit.filter(s=>s.online).length}</b></div>
+          <div><span>Último envio</span><b>{profit[0]?age(profit[0].ageSeconds):"—"}</b></div>
         </div>
       </article>
 
       <article className="integrationCard">
         <div className="integrationCardTop">
           <div className="integrationIcon"><ShieldCheck/></div>
-          <span className="integrationState neutral">BACKEND</span>
+          <span className="integrationState neutral">SERVIDOR</span>
         </div>
-        <h2>Segurança do ingest</h2>
-        <p>O bridge usa uma chave privada no cabeçalho para impedir envio não autorizado.</p>
+        <h2>Conexão Segura</h2>
         <div className="integrationChecklist">
-          <span>{status?.configured.ingestKey?<CheckCircle2/>:<Clock3/>} Chave de ingestão {status?.configured.ingestKey?"configurada":"pendente"}</span>
-          <span>{status?.configured.database?<CheckCircle2/>:<Clock3/>} Banco persistente {status?.configured.database?"configurado":"opcional"}</span>
-          <span>{status?.configured.redis?<CheckCircle2/>:<Clock3/>} Redis {status?.configured.redis?"configurado":"opcional"}</span>
+          <span>{status?.configured.ingestKey?<CheckCircle2/>:<Clock3/>} Autenticação {status?.configured.ingestKey?"ativa":"pendente"}</span>
+          <span>{status?.configured.database?<CheckCircle2/>:<Clock3/>} Banco de dados {status?.configured.database?"ativo":"opcional"}</span>
+          <span>{status?.configured.redis?<CheckCircle2/>:<Clock3/>} Cache distribuído {status?.configured.redis?"ativo":"opcional"}</span>
         </div>
       </article>
     </section>
 
     <section className="integrationPanel">
       <div className="fxPanelHead">
-        <div><h2>Streams recebidos</h2><p>Atualização automática desta tela a cada 10 segundos.</p></div>
+        <div><h2>Dados recebidos</h2></div>
         <Server size={18}/>
       </div>
       <div className="integrationTable">
-        <div className="integrationTr integrationTh"><span>Fonte</span><span>Ativo</span><span>Timeframe</span><span>Candles</span><span>Bid</span><span>Ask</span><span>Último push</span><span>Status</span></div>
+        <div className="integrationTr integrationTh"><span>Fonte</span><span>Ativo</span><span>Período</span><span>Velas</span><span>Compra</span><span>Venda</span><span>Último envio</span><span>Situação</span></div>
         {(status?.streams??[]).map(s=><div className="integrationTr" key={s.source+s.symbol+s.timeframe}>
-          <span><b>{s.source.toUpperCase()}</b></span>
+          <span><b>{s.source==="mt5"?"MT5":s.source==="profit"?"PROFIT":s.source.toUpperCase()}</b></span>
           <span>{s.symbol}</span>
           <span>{s.timeframe}</span>
           <span>{s.candleCount}</span>
           <span>{s.bid??"—"}</span>
           <span>{s.ask??"—"}</span>
           <span>{age(s.ageSeconds)}</span>
-          <span className={s.online?"upText":"downText"}>{s.online?"ONLINE":"SEM PUSH"}</span>
+          <span className={s.online?"upText":"downText"}>{s.online?"CONECTADO":"SEM ATUALIZAÇÃO"}</span>
         </div>)}
-        {!loading&&!status?.streams?.length&&<div className="integrationEmpty"><Database/><b>Nenhum bridge enviou dados ainda.</b><span>Execute o bridge local do MT5 ou Profit para a conexão aparecer aqui.</span></div>}
+        {!loading&&!status?.streams?.length&&<div className="integrationEmpty"><Database/><b>Nenhum dado recebido ainda.</b></div>}
       </div>
     </section>
-
-    <section className="integrationHow">
-      <article className="integrationPanel">
-        <h2>MetaTrader 5</h2>
-        <ol>
-          <li>Instale Python no mesmo computador do MT5.</li>
-          <li>Entre em <code>connectors/mt5-bridge</code>.</li>
-          <li>Instale <code>pip install -r requirements.txt</code>.</li>
-          <li>Configure <code>SAAS_URL</code> e <code>CONNECTOR_INGEST_KEY</code>.</li>
-          <li>Deixe o terminal MT5 aberto e execute <code>python bridge.py</code>.</li>
-        </ol>
-      </article>
-      <article className="integrationPanel">
-        <h2>ProfitDLL</h2>
-        <ol>
-          <li>Instale/contrate a ProfitDLL oficial da Nelogica.</li>
-          <li>Configure DLL, chave de ativação e login no arquivo de ambiente local.</li>
-          <li>Informe tickers vigentes, por exemplo <code>WINZ26:F</code>.</li>
-          <li>Execute <code>python bridge.py</code>.</li>
-          <li>Quando Market Data ficar conectado, os ticks passam a alimentar o SaaS.</li>
-        </ol>
-      </article>
-    </section>
-
-    <p className="integrationWarning">{status?.warning??"O armazenamento persistente compartilhado deve ser configurado para produção escalável."}</p>
   </main>;
 }
