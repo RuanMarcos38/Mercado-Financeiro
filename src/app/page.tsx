@@ -8,6 +8,7 @@ import {
   Users, Zap
 } from "lucide-react";
 import type { Candle } from "@/lib/market/types";
+import UserSessionChip from "@/components/UserSessionChip";
 
 type Analysis={
   regime?:string;
@@ -114,6 +115,8 @@ export default function Home(){
   const [data,setData]=useState<Overview|null>(null);
   const [error,setError]=useState("");
   const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState("");
+  const [marketFilter,setMarketFilter]=useState("Reais");
 
   async function load(){
     try{
@@ -133,6 +136,10 @@ export default function Home(){
   },[]);
 
   const realAssets=(data?.assets??[]).filter(a=>a.ok);
+  const filteredAssets=realAssets.filter(a=>{
+    const q=search.trim().toLowerCase();
+    return !q||a.symbol.toLowerCase().includes(q)||(a.name??"").toLowerCase().includes(q);
+  });
   const featured=realAssets.find(a=>a.symbol==="PETR4")??realAssets[0];
   const signals=realAssets.map(a=>a.analysis?.signal).filter(Boolean) as NonNullable<Analysis["signal"]>[];
   const buys=signals.filter(s=>s.side==="COMPRA").length;
@@ -161,14 +168,15 @@ export default function Home(){
         <a href="#mercados"><BarChart3/> Mercados</a>
         <a href="/forex"><Globe2/> Forex 24h</a>
         <a href="#grafico"><CandlestickChart/> Gráficos</a>
-        <a href="#sinais"><Zap/> Sinais</a>\n        <a href="/autotrade"><Sparkles/> AI Trade Radar</a>
+        <a href="#sinais"><Zap/> Sinais</a>
+        <a href="/autotrade"><Sparkles/> AI Trade Radar</a>
         <a href="#alertas"><Bell/> Alertas</a>
         <a href="#macro"><LineChart/> Macro & Notícias</a>
         <a href="/lab"><FlaskConical/> Backtests</a>
         <a href="#relatorios"><FileBarChart/> Relatórios</a>
-        <a href="#usuarios"><Users/> Usuários</a>
+        <a href="/usuarios"><Users/> Usuários</a>
         <a href="/integracoes"><Activity/> Integrações</a>
-        <a href="#configuracoes"><Settings/> Configurações</a>
+        <a href="/configuracoes"><Settings/> Configurações</a>
       </nav>
       <div className="sidebarTrust">
         <ShieldCheck size={20}/>
@@ -178,11 +186,11 @@ export default function Home(){
 
     <section className="novaMain">
       <header className="novaTopbar">
-        <div className="globalSearch"><Search size={16}/><input placeholder="Buscar ativo, mercado ou indicador..."/></div>
+        <div className="globalSearch"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ativo, mercado ou indicador..."/></div>
         <div className="topRight">
           <span className="syncBadge"><i/> Consulta a cada 1 min</span>
           <button className="roundButton" onClick={load} title="Atualizar agora"><Bell size={17}/><em/></button>
-          <div className="userChip"><span>RM</span><div><b>Trader</b><small>Conta principal</small></div><ChevronDown size={14}/></div>
+          <UserSessionChip/>
         </div>
       </header>
 
@@ -231,7 +239,7 @@ export default function Home(){
                   <div className="assetTitle"><span className="assetIcon winIcon">{featured?.symbol?.[0]??"?"}</span><div><b>{featured?.symbol??"Mercado"} — {featured?.name??"aguardando fonte"}</b><small>{featured?.delayed?"DADO REAL · DELAY DO PLANO GRATUITO":"Fonte pública"}</small></div></div>
                   <div className="quoteLine"><strong>{fmtPrice(featured?.price,featured?.currency)}</strong><span className={(featured?.changePercent??0)>=0?"upText":"downText"}>{fmtPct(featured?.changePercent)}</span></div>
                 </div>
-                <div className="timeframes"><button>1m</button><button className="active">5m</button><button>15m</button><button>1h</button><button>1D</button></div>
+                <div className="timeframes"><button disabled title="Disponível com feed MT5/Profit">1m</button><button className="active">5m</button><button disabled title="Disponível com feed MT5/Profit">15m</button><button disabled title="Disponível com feed MT5/Profit">1h</button><button disabled title="Disponível com feed MT5/Profit">1D</button></div>
               </div>
               <CandleChart candles={candles}/>
               <div className="chartFooter">
@@ -248,10 +256,10 @@ export default function Home(){
                 <div><h2>Mercados com dados reais conectados</h2><p>Não há preços fictícios nesta tabela.</p></div>
                 <div className="tableSearch"><Search size={14}/><span>Fonte / ativo</span></div>
               </div>
-              <div className="marketFilters"><button className="active">Reais</button><button>Ações</button><button>BCB</button><button>Opcionais</button></div>
+              <div className="marketFilters">{["Reais","Ações","BCB","Opcionais"].map(f=><button key={f} className={marketFilter===f?"active":""} onClick={()=>setMarketFilter(f)}>{f}</button>)}</div>
               <div className="novaTable">
                 <div className="novaTr novaTh"><span>Ativo</span><span>Preço</span><span>Variação</span><span>Fonte</span><span>Sinal IA</span><span>Conf.</span><span>Atualizado</span></div>
-                {realAssets.map((a,i)=>{
+                {filteredAssets.map((a,i)=>{
                   const s=a.analysis?.signal;
                   return <div className="novaTr" key={a.symbol}>
                     <span className="assetCell"><i className={`assetDot d${i%5+1}`}/><b>{a.symbol}</b><small>{a.name}</small></span>
@@ -333,7 +341,7 @@ export default function Home(){
             <div className="reportPreview">
               <b>Snapshot {fmtTime(data?.generatedAt)}</b>
               <p>{realAssets.length} ações reais carregadas. {signals.length} sinais calculados sobre OHLCV. Confiança média {signals.length?avgConf.toFixed(1):"—"}%. PTAX {data?.ptax?fmtPrice(data.ptax.price):"indisponível"}. WIN/WDO/XAU não recebem preço fictício enquanto seus feeds específicos não estiverem conectados.</p>
-              <button>Configurar entrega no celular</button>
+              <a className="reportAction" href="/autotrade">Configurar alertas e entrega</a>
             </div>
           </article>
         </section>
