@@ -77,3 +77,27 @@ export async function notifyTenantOpportunity(tenantId:string,o:AlertOpportunity
   if(ok)g.__waSignalDedup!.set(key,Date.now());
   return ok;
 }
+
+
+// Compatibilidade com o Mercado Espelho global: distribui apenas oportunidades APTAS
+// para empresas que habilitaram WhatsApp e atingem a confiança mínima.
+export async function notifyTenantsForOpportunity(o:AlertOpportunity){
+  if(o.status!=="APTO"||!o.side)return;
+  try{
+    const admin=createSupabaseAdminClient();
+    const {data}=await admin.from("notification_preferences")
+      .select("tenant_id,whatsapp_e164,whatsapp_enabled,min_confidence")
+      .eq("whatsapp_enabled",true);
+    for(const p of data??[]){
+      if(!p.tenant_id)continue;
+      const key=dedupKey(String(p.tenant_id),o);
+      const last=g.__waSignalDedup!.get(key)??0;
+      if(Date.now()-last<30*60*1000)continue;
+      if(!p.whatsapp_e164||o.confidence<Number(p.min_confidence??75))continue;
+      const ok=await sendTemplate(String(p.whatsapp_e164).replace(/\D/g,""),o);
+      if(ok)g.__waSignalDedup!.set(key,Date.now());
+    }
+  }catch{
+    // Sem Supabase configurado, o fluxo tenant-specific usa fallback de ambiente.
+  }
+}
