@@ -7,6 +7,7 @@ const PUBLIC_PATHS=[
   "/api/auth/register",
   "/api/health",
   "/api/connectors/market-push",
+  "/api/connectors/analyze",
   "/api/autotrade/intents"
 ];
 
