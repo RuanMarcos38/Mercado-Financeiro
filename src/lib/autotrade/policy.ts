@@ -62,6 +62,8 @@ export type TradeCandidate={
   reasons:string[];
   blocks:string[];
   validForSeconds:number;
+  updatedAt:string;
+  ageSeconds:number;
 };
 
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -97,6 +99,8 @@ export function evaluateCandidate(i:CandidateInput,cfg:AutoTradeConfig=DEFAULT_A
     rr:side?cfg.takeProfitR:undefined,
     reasons,
     blocks,
-    validForSeconds:60
+    validForSeconds:60,
+    updatedAt:new Date().toISOString(),
+    ageSeconds:Math.max(0,Math.round(i.sourceAgeSeconds??0))
   };
 }
