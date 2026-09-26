@@ -174,3 +174,6 @@ a{text-decoration:none;color:inherit}
 .fxBottomCompact{display:grid;grid-template-columns:1fr 1fr;gap:10px}.compactNews{max-height:190px;overflow:auto}.technicalDetails summary{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:9px;font-weight:800}.compactTechnical{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}.compactTechnical div{border:1px solid var(--line);border-radius:7px;padding:8px}.compactTechnical span,.compactTechnical b{display:block}.compactTechnical span{font-size:6.5px;color:var(--muted)}.compactTechnical b{font-size:9px;margin-top:3px}.reasonCompact{margin-top:8px}.reasonCompact p{font-size:7.5px;color:#6c7889;margin:4px 0}.compactBacktest{margin-top:10px}
 @media(max-width:980px){.tradeWorkspace{grid-template-columns:1fr}.fxBottomCompact{grid-template-columns:1fr}.signalLevels{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:680px){.chartTopbar{display:block}.tfSwitch{margin-top:8px}.signalLevels,.compactTechnical{grid-template-columns:1fr 1fr}.liveCandleChart,.chartEmpty{height:330px;min-height:330px}}
+
+.autoTrReason{grid-template-columns:.72fr .62fr .85fr .48fr .9fr .62fr .55fr .78fr .78fr .78fr 1.45fr;min-width:1180px}
+.candidateReason{white-space:normal!important;line-height:1.35;color:#6e7a8c;font-size:7px}
