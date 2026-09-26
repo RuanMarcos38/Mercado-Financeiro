@@ -483,3 +483,24 @@ img,svg,canvas{max-width:100%}
 
 /* Tela de integrações sem instruções internas */
 .integrationHow,.integrationWarning:empty{display:none!important}
+
+/* Decisão simplificada para usuários iniciantes */
+.beginnerDecision{
+  display:grid;
+  gap:4px;
+  border:1px solid #d8e3f4;
+  background:#f7faff;
+  border-radius:9px;
+  padding:10px 11px;
+}
+.beginnerDecisionLabel{font-size:6.5px;font-weight:900;color:#718096;letter-spacing:.04em}
+.beginnerDecision strong{font-size:11px;line-height:1.35;color:#24364f}
+.beginnerDecision small{font-size:6.8px;color:#7d8999}
+.beginnerLevels div{min-height:76px}
+.beginnerLevels small{display:block;margin-top:4px;font-size:6.5px;line-height:1.35;color:#8793a4}
+.beginnerLevels span{font-weight:800}
+@media(max-width:768px){
+  .beginnerDecision{padding:10px}
+  .beginnerDecision strong{font-size:12px}
+  .beginnerLevels div{min-height:auto}
+}
