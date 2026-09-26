@@ -1,5 +1,5 @@
 import { NextRequest,NextResponse } from "next/server";
-import { listMarketStreams,getMarketStream } from "@/lib/connectors/market-stream";
+import { listMarketStreams,getBestMarketStream } from "@/lib/connectors/market-stream";
 import { getAutoTradeConfig,getCandidates } from "@/lib/autotrade/store";
 import { processStream } from "@/lib/autotrade/engine";
 import { resolveRequestTenant } from "@/lib/auth/request-tenant";
@@ -11,7 +11,7 @@ export async function GET(req:NextRequest){
   const streams=listMarketStreams(tenant.tenantId);
   const warmup:any[]=[];
   for(const s of streams){
-    const stream=getMarketStream(tenant.tenantId,s.source,s.symbol,s.timeframe);
+    const stream=getBestMarketStream(tenant.tenantId,s.symbol,s.timeframe);
     if(!stream)continue;
     const result=processStream(tenant.tenantId,{source:s.source,symbol:s.symbol,timeframe:s.timeframe,lastSeen:s.lastSeen,candles:stream.candles,bid:stream.bid,ask:stream.ask,spread:stream.spread,meta:stream.meta});
     if(!result.ready&&result.warmup)warmup.push({source:s.source,symbol:s.symbol,timeframe:s.timeframe,...result.warmup});
