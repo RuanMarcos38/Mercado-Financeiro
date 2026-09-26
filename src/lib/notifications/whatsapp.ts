@@ -1,14 +1,18 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { GlobalOpportunity } from "@/lib/market-mirror/opportunities";
+import type { TradeCandidate } from "@/lib/autotrade/policy";
 
 const g=globalThis as typeof globalThis & { __waSignalDedup?:Map<string,number> };
 if(!g.__waSignalDedup)g.__waSignalDedup=new Map();
 
-function dedupKey(tenantId:string,o:GlobalOpportunity){
+type AlertOpportunity=Pick<TradeCandidate,
+  "source"|"symbol"|"timeframe"|"status"|"side"|"confidence"|"score"|"entry"|"stopLoss"|"takeProfit"
+>;
+
+function dedupKey(tenantId:string,o:AlertOpportunity){
   return [tenantId,o.source,o.symbol,o.timeframe,o.side,o.score].join(":");
 }
 
-async function sendTemplate(to:string,o:GlobalOpportunity){
+async function sendTemplate(to:string,o:AlertOpportunity){
   const token=process.env.META_WHATSAPP_TOKEN;
   const phoneId=process.env.META_WHATSAPP_PHONE_NUMBER_ID;
   const template=process.env.META_WHATSAPP_SIGNAL_TEMPLATE;
@@ -36,29 +40,40 @@ async function sendTemplate(to:string,o:GlobalOpportunity){
     }
   };
 
-  const res=await fetch(`https://graph.facebook.com/${version}/${phoneId}/messages`,{
+  const res=await fetch("https://graph.facebook.com/"+version+"/"+phoneId+"/messages",{
     method:"POST",
-    headers:{Authorization:`Bearer ${token}`,"content-type":"application/json"},
+    headers:{Authorization:"Bearer "+token,"content-type":"application/json"},
     body:JSON.stringify(body)
   });
   return res.ok;
 }
 
-export async function notifyTenantsForOpportunity(o:GlobalOpportunity){
-  if(o.status!=="APTO"||!o.side)return;
+export async function notifyTenantOpportunity(tenantId:string,o:AlertOpportunity){
+  if(o.status!=="APTO"||!o.side)return false;
+
+  const key=dedupKey(tenantId,o);
+  const last=g.__waSignalDedup!.get(key)??0;
+  if(Date.now()-last<30*60*1000)return false;
+
+  let to=process.env.MARKET_ALERT_WHATSAPP_E164?.replace(/\D/g,"")||"";
+  let minConfidence=Number(process.env.MARKET_ALERT_MIN_CONFIDENCE||75);
+
   try{
     const admin=createSupabaseAdminClient();
     const {data}=await admin.from("notification_preferences")
-      .select("tenant_id,whatsapp_e164,whatsapp_enabled,min_confidence")
-      .eq("whatsapp_enabled",true);
-    for(const p of data??[]){
-      if(!p.whatsapp_e164||o.confidence<Number(p.min_confidence??75))continue;
-      const key=dedupKey(p.tenant_id,o);
-      const last=g.__waSignalDedup!.get(key)??0;
-      if(Date.now()-last<30*60*1000)continue;
-      if(await sendTemplate(p.whatsapp_e164,o))g.__waSignalDedup!.set(key,Date.now());
+      .select("whatsapp_e164,whatsapp_enabled,min_confidence")
+      .eq("tenant_id",tenantId)
+      .maybeSingle();
+    if(data?.whatsapp_enabled&&data.whatsapp_e164){
+      to=String(data.whatsapp_e164).replace(/\D/g,"");
+      minConfidence=Number(data.min_confidence??minConfidence);
     }
   }catch{
-    // Sem Supabase/Meta configurado: análise continua normalmente.
+    // fallback para variável de ambiente da implantação
   }
+
+  if(!to||o.confidence<minConfidence)return false;
+  const ok=await sendTemplate(to,o);
+  if(ok)g.__waSignalDedup!.set(key,Date.now());
+  return ok;
 }
