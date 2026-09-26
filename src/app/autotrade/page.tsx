@@ -53,7 +53,7 @@ export default function AutoTradePage(){
     }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar o radar");}
   }
 
-  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id);},[]);
+  useEffect(()=>{load();const id=setInterval(load,15000);return()=>clearInterval(id);},[]);
 
   async function enableNotifications(){
     if(typeof Notification==="undefined"){setError("Este navegador não suporta notificações.");return;}
@@ -100,7 +100,7 @@ export default function AutoTradePage(){
       </article>
       <article className="autoStatusCard">
         <div className="autoStatusHead"><Bell/><span>Alertas</span></div>
-        <strong>5s</strong><small>atualização visual contínua</small>
+        <strong>15s</strong><small>atualização visual; decisões vencem após 20s sem dados novos</small>
       </article>
     </section>
 
