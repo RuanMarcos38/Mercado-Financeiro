@@ -14,6 +14,27 @@ export type ProcessResult={
   warmup?:{required:number;received:number;missing:number};
   candidate?:TradeCandidate;
   analysis?:unknown;
+  decision?:{
+    action:"COMPRA"|"VENDA"|"AGUARDAR";
+    status:"APTO"|"BLOQUEADO"|"AGUARDAR";
+    confidence:number;
+    score:number;
+    price:number;
+    entry:number;
+    stopLoss:number|null;
+    takeProfit:number|null;
+    rr:number|null;
+    risk:string;
+    atr:number|null;
+    spread:number|null;
+    newsRisk:number;
+    support:number|null;
+    resistance:number|null;
+    indicatorsEvaluated:number;
+    reasons:string[];
+    blocks:string[];
+    updatedAt:string;
+  };
   intent?:unknown;
 };
 
@@ -75,8 +96,39 @@ export function processStream(tenantId:string,input:{
     intent=enqueueIntent(tenantId,candidate,cfg.mode);
   }
 
+  const nearestSupport=Array.isArray(snapshot?.levels?.support)
+    ?snapshot.levels.support.filter((x:number)=>x<=price).sort((a:number,b:number)=>b-a)[0]
+    :undefined;
+  const nearestResistance=Array.isArray(snapshot?.levels?.resistance)
+    ?snapshot.levels.resistance.filter((x:number)=>x>=price).sort((a:number,b:number)=>a-b)[0]
+    :undefined;
+  const action=candidate.side==="BUY"?"COMPRA":candidate.side==="SELL"?"VENDA":"AGUARDAR";
+
+  const decision={
+    action:action as "COMPRA"|"VENDA"|"AGUARDAR",
+    status:candidate.status,
+    confidence:candidate.confidence,
+    score:candidate.score,
+    price,
+    entry:candidate.entry,
+    stopLoss:candidate.stopLoss??null,
+    takeProfit:candidate.takeProfit??null,
+    rr:candidate.rr??null,
+    risk:String(signal.risk??"—"),
+    atr:Number.isFinite(Number(snapshot?.atr14))?Number(snapshot.atr14):null,
+    spread:Number.isFinite(Number(input.spread))?Number(input.spread):null,
+    newsRisk,
+    support:Number.isFinite(Number(nearestSupport))?Number(nearestSupport):null,
+    resistance:Number.isFinite(Number(nearestResistance))?Number(nearestResistance):null,
+    indicatorsEvaluated:Number(analysis?.indicatorCoverage??0),
+    reasons:[...candidate.reasons],
+    blocks:[...candidate.blocks],
+    updatedAt:new Date().toISOString()
+  };
+
   return {
     ready:true,
+    decision,
     candidate:{
       ...candidate,
       reasons:[...candidate.reasons,`Consenso multi-timeframe: ${confirmations}/${availableTimeframes} confirmações ${candidate.side??""}`]
