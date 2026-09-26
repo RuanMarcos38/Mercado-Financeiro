@@ -22,6 +22,11 @@ RISK_PCT=float(os.getenv("MT5_RISK_PER_TRADE_PCT","0.5"))
 MAX_POSITIONS=max(1,int(os.getenv("MT5_MAX_OPEN_POSITIONS","2")))
 DEVIATION=max(1,int(os.getenv("MT5_DEVIATION_POINTS","20")))
 MAGIC=int(os.getenv("MT5_MAGIC","560056"))
+MT5_LOGIN=os.getenv("MT5_LOGIN","").strip()
+MT5_PASSWORD=os.getenv("MT5_PASSWORD","")
+MT5_SERVER=os.getenv("MT5_SERVER","").strip()
+MT5_TIMEOUT=max(10000,int(os.getenv("MT5_TIMEOUT_MS","60000")))
+RECONNECT_SECONDS=max(2,int(os.getenv("MT5_RECONNECT_SECONDS","5")))
 
 WARMED_STREAMS=set()
 
@@ -40,15 +45,51 @@ def headers():
     return h
 
 def init():
-    path=os.getenv("MT5_TERMINAL_PATH")
-    kwargs={}
+    path=os.getenv("MT5_TERMINAL_PATH","").strip()
+    kwargs={"timeout":MT5_TIMEOUT}
     if path: kwargs["path"]=path
-    ok=mt5.initialize(**kwargs) if kwargs else mt5.initialize()
-    if not ok: raise RuntimeError(f"mt5.initialize falhou: {mt5.last_error()}")
+    if MT5_LOGIN:
+        try: kwargs["login"]=int(MT5_LOGIN)
+        except ValueError: raise RuntimeError("MT5_LOGIN deve conter apenas números.")
+    if MT5_PASSWORD: kwargs["password"]=MT5_PASSWORD
+    if MT5_SERVER: kwargs["server"]=MT5_SERVER
+
+    ok=mt5.initialize(**kwargs)
+    if not ok:
+        raise RuntimeError(f"mt5.initialize/autologin falhou: {mt5.last_error()}")
+
+    acct=mt5.account_info()
+    if MT5_LOGIN and (not acct or str(acct.login)!=str(MT5_LOGIN)):
+        login_kwargs={"timeout":MT5_TIMEOUT}
+        if MT5_PASSWORD: login_kwargs["password"]=MT5_PASSWORD
+        if MT5_SERVER: login_kwargs["server"]=MT5_SERVER
+        if not mt5.login(int(MT5_LOGIN),**login_kwargs):
+            raise RuntimeError(f"mt5.login falhou: {mt5.last_error()}")
+        acct=mt5.account_info()
+
+    info=mt5.terminal_info()
+    print("MT5 conectado:",bool(info))
+    print("Conta:",acct.login if acct else None,"Servidor:",acct.server if acct else None,"AutoTrade local:",AUTOTRADE_LIVE)
+
+def ensure_connection():
     info=mt5.terminal_info()
     acct=mt5.account_info()
-    print("MT5 conectado:",info)
-    print("Conta:",acct.login if acct else None,"AutoTrade local:",AUTOTRADE_LIVE)
+    expected_ok=(not MT5_LOGIN) or (acct is not None and str(acct.login)==str(MT5_LOGIN))
+    if info is not None and acct is not None and expected_ok:
+        return True
+
+    print("WATCHDOG: conexão MT5 perdida. Tentando reabrir/reconectar...")
+    try: mt5.shutdown()
+    except Exception: pass
+
+    while True:
+        try:
+            init()
+            print("WATCHDOG: MT5 reconectado.")
+            return True
+        except Exception as e:
+            print("WATCHDOG: falha ao reconectar:",e)
+            time.sleep(RECONNECT_SECONDS)
 
 def normalize_symbol(s):
     if "/" in s:return s
@@ -178,6 +219,7 @@ def main():
     init()
     try:
         while True:
+            ensure_connection()
             for symbol in SYMBOLS:
                 try:
                     if not mt5.symbol_select(symbol,True):
