@@ -1,6 +1,6 @@
 export type Candle = {
   symbol: string;
-  timeframe: "1m" | "5m" | "15m" | "1h" | "1d";
+  timeframe: "1m" | "5m" | "10m" | "15m" | "1h" | "1d";
   time: string;
   open: number;
   high: number;
