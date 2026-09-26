@@ -63,7 +63,7 @@ export default function IntegracoesPage(){
         <h1>Integrações de Mercado</h1>
         <p>MetaTrader 5 e Profit alimentando o mesmo motor de análise do SaaS.</p>
       </div>
-      <button className="refreshIntegration" onClick={load}><RefreshCw size={15}/> Atualizar</button>
+      <div className="welcomeActions"><a className="softAction" href="/integracoes/chaves"><ShieldCheck size={15}/> Chaves da empresa</a><button className="refreshIntegration" onClick={load}><RefreshCw size={15}/> Atualizar</button></div>
     </header>
 
     {error&&<div className="realDataError">{error}</div>}
