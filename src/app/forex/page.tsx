@@ -126,8 +126,8 @@ export default function ForexPage(){
     ?"Confluência aprovada pelo motor."
     :live?.candidate?.status==="BLOQUEADO"
       ?(live?.candidate?.blocks?.[0]??"Direção detectada, mas bloqueada por regra de segurança.")
-      :"Sem direção confirmada neste momento."
-}}</span></div></div>
+       :"Sem direção confirmada neste momento."
+}</span></div></div>
         {live?.verifiedPerformance?.accuracyClaimAllowed&&<div className="verifiedAccuracy">Precisão verificada: <b>{live.verifiedPerformance.accuracyLabel}</b> · {live.verifiedPerformance.signals} sinais</div>}
         <button className="backtestCompact" disabled={busy} onClick={runBacktest}><Zap size={14}/> Backtest deste setup</button>
         {error&&<div className="fxInfoBox">{error}</div>}
