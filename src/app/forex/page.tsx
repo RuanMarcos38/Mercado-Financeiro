@@ -8,7 +8,7 @@ import type { Candle } from "@/lib/market/types";
 type Pair={symbol:string;base:string;quote:string;group:string;label:string};
 type PairResponse={counts:{total:number;majors:number;minors:number;exotics:number};pairs:Pair[];providers:Array<{id:string;configured:boolean;realtime:boolean;note:string}>};
 type News={risk:number;items:Array<{title:string;url:string;domain?:string;seenDate?:string}>};
-type LivePayload={ready:boolean;source:string;symbol:string;timeframe:string;lastSeen:string;bid?:number;ask?:number;spread?:number;candleCount:number;series:Candle[];candidate?:any;analysis?:any;error?:string};
+type LivePayload={ready:boolean;source:string;symbol:string;timeframe:string;lastSeen:string;bid?:number;ask?:number;spread?:number;candleCount:number;series:Candle[];candidate?:any;analysis?:any;externalContext?:any;error?:string};
 
 const TFS=["1m","5m","10m","1h"] as const;
 
@@ -78,7 +78,7 @@ export default function ForexPage(){
     }finally{setBusy(false);}
   }
 
-  const signal=live?.candidate?.status==="APTO"?(live?.candidate?.side==="BUY"?"COMPRA":"VENDA"):"AGUARDAR";
+  const signal=live?.candidate?.side==="BUY"?"COMPRA":live?.candidate?.side==="SELL"?"VENDA":"AGUARDAR";
   const confidence=live?.candidate?.confidence??live?.analysis?.signal?.confidence??0;
   const age=live?.lastSeen?Math.max(0,Math.round((Date.now()-new Date(live.lastSeen).getTime())/1000)):null;
 
@@ -119,7 +119,13 @@ export default function ForexPage(){
           <div><span>Alvo</span><b>{live?.candidate?.takeProfit??"—"}</b></div>
           <div><span>Risco</span><b>{live?.analysis?.signal?.risk??"—"}</b></div>
         </div>
-        <div className="signalStatus"><ShieldCheck size={15}/><div><b>{live?.candidate?.status??"AGUARDAR"}</b><span>{live?.candidate?.status==="APTO"?"Confluência aprovada pelo motor.":"Nenhuma entrada automática liberada neste momento."}</span></div></div>
+        <div className="signalStatus"><ShieldCheck size={15}/><div><b>{live?.candidate?.status??"AGUARDAR"}</b><span>{
+  live?.candidate?.status==="APTO"
+    ?"Confluência aprovada pelo motor."
+    :live?.candidate?.status==="BLOQUEADO"
+      ?(live?.candidate?.blocks?.[0]??"Direção detectada, mas bloqueada por regra de segurança.")
+      :"Sem direção confirmada neste momento."
+}</span></div></div>
         <button className="backtestCompact" disabled={busy} onClick={runBacktest}><Zap size={14}/> Backtest deste setup</button>
         {error&&<div className="fxInfoBox">{error}</div>}
       </aside>
@@ -138,6 +144,8 @@ export default function ForexPage(){
           <div><span>RSI</span><b>{Number(live?.analysis?.snapshot?.rsi14??0).toFixed(1)}</b></div>
           <div><span>ADX</span><b>{Number(live?.analysis?.snapshot?.adx14??0).toFixed(1)}</b></div>
           <div><span>Score</span><b>{live?.candidate?.score??live?.analysis?.signal?.score??"—"}</b></div>
+          <div><span>Notícias</span><b>{live?.externalContext?Math.round((live.externalContext.newsRisk??0)*100)+"% risco":"—"}</b></div>
+          <div><span>Headlines</span><b>{live?.externalContext?.headlines??"—"}</b></div>
         </div>
         <div className="reasonCompact">{(live?.candidate?.reasons??live?.analysis?.signal?.reasons??[]).slice(0,5).map((x:string)=><p key={x}>• {x}</p>)}</div>
       </details>
