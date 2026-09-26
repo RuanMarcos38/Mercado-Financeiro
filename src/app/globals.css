@@ -504,3 +504,11 @@ img,svg,canvas{max-width:100%}
   .beginnerDecision strong{font-size:12px}
   .beginnerLevels div{min-height:auto}
 }
+
+/* Administração de usuários/empresas sem alterar a grade existente */
+.userAdminForms{display:grid;gap:12px}
+.companyCreateDetails{border-top:1px solid var(--line);padding-top:10px}
+.companyCreateDetails>summary{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:9px;font-weight:850;color:#40516a;list-style:none}
+.companyCreateDetails>summary::-webkit-details-marker{display:none}
+.companyCreateForm{margin-top:10px}
+.companySuccess{margin:0;padding:8px 9px;border:1px solid #bfe6d7;background:#effaf5;color:#26765b;border-radius:8px;font-size:8px}
