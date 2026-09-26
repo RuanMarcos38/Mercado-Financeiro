@@ -15,6 +15,8 @@ export type ExecutionIntent={
   confidence:number;
   score:number;
   status:"PENDING"|"CLAIMED"|"EXECUTED"|"REJECTED"|"EXPIRED";
+  origin?:"auto"|"manual";
+  confirmedByUser?:boolean;
   note?:string;
 };
 
@@ -56,7 +58,7 @@ export function audit(tenantId:string,type:string,message:string,data?:unknown){
 }
 export function getAudit(tenantId:string){return state(tenantId).audit;}
 
-export function enqueueIntent(tenantId:string,candidate:TradeCandidate,mode:"paper"|"live"){
+export function enqueueIntent(tenantId:string,candidate:TradeCandidate,mode:"paper"|"live",opts?:{origin?:"auto"|"manual";confirmedByUser?:boolean}){
   if(candidate.status!=="APTO"||!candidate.side)throw new Error("Candidato não está apto.");
   const s=state(tenantId);
   const now=Date.now();
@@ -69,7 +71,9 @@ export function enqueueIntent(tenantId:string,candidate:TradeCandidate,mode:"pap
     expiresAt:new Date(now+candidate.validForSeconds*1000).toISOString(),
     source:candidate.source,symbol:candidate.symbol,timeframe:candidate.timeframe,
     side:candidate.side,mode,entry:candidate.entry,stopLoss:candidate.stopLoss,takeProfit:candidate.takeProfit,
-    confidence:candidate.confidence,score:candidate.score,status:"PENDING"
+    confidence:candidate.confidence,score:candidate.score,status:"PENDING",
+    origin:opts?.origin??"auto",
+    confirmedByUser:Boolean(opts?.confirmedByUser)
   };
   s.intents.unshift(intent);
   s.intents=s.intents.slice(0,500);
