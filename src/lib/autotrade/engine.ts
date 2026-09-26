@@ -74,10 +74,31 @@ export function processStream(input:{
   });
   setCandidates(current);
 
+  const sameSymbol=getCandidates().filter(x=>x.source===candidate.source&&x.symbol===candidate.symbol);
+  const sameSideApt=sameSymbol.filter(x=>x.status==="APTO"&&x.side===candidate.side);
+  const confirmations=sameSideApt.length;
+  const availableTimeframes=new Set(sameSymbol.map(x=>x.timeframe)).size;
+  const consensusRequired=availableTimeframes>=2?2:1;
+  const consensusPassed=candidate.status==="APTO"&&confirmations>=consensusRequired;
+
   let intent:unknown=undefined;
-  if(cfg.mode!=="off"&&candidate.status==="APTO"&&canCreateIntent(candidate,cfg)){
+  if(cfg.mode!=="off"&&consensusPassed&&canCreateIntent(candidate,cfg)){
     intent=enqueueIntent(candidate,cfg.mode);
   }
 
-  return {ready:true,candidate,analysis,intent};
+  return {
+    ready:true,
+    candidate:{
+      ...candidate,
+      reasons:[
+        ...candidate.reasons,
+        `Consenso multi-timeframe: ${confirmations}/${availableTimeframes} confirmações ${candidate.side??""}`
+      ]
+    },
+    analysis:{
+      ...analysis,
+      consensus:{confirmations,availableTimeframes,required:consensusRequired,passed:consensusPassed}
+    },
+    intent
+  };
 }
