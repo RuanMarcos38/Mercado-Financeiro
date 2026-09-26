@@ -144,3 +144,8 @@ a{text-decoration:none;color:inherit}
 .timeframes button:disabled{opacity:.35;cursor:not-allowed}
 
 @media(max-width:900px){.usersGrid{grid-template-columns:1fr}.settingsGrid,.settingsActions{grid-template-columns:1fr}.usersHeader{display:block}.usersHeader>button{margin-top:10px}}
+
+.fxSourceRow{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:10px}.fxSourceRow label{display:grid;gap:5px;font-size:7.5px;color:#68778c}.fxSourceRow select{min-width:180px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:8px;font-size:8px}.fxSourceRow>span{font-size:7px;color:var(--muted)}
+.fxFeedState{display:flex;align-items:flex-start;gap:9px;border:1px dashed #cdd8e8;background:#fafcff;border-radius:9px;padding:18px;margin-bottom:8px;color:#5f6e83}.fxFeedState svg{color:var(--blue);flex:none}.fxFeedState b,.fxFeedState span{display:block}.fxFeedState b{font-size:9px}.fxFeedState span{font-size:7.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.fxInfoBox{background:#eef4ff;border:1px solid #cfe0fb;color:#42679f;border-radius:8px;padding:9px;margin-top:9px;font-size:8px}
+@media(max-width:680px){.fxSourceRow{display:grid;align-items:stretch}.fxSourceRow select{width:100%}}
