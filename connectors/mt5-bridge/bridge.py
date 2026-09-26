@@ -12,6 +12,7 @@ SYMBOLS=[s.strip() for s in os.getenv("MT5_SYMBOLS","EURUSD,GBPUSD,USDJPY,USDCHF
 INTERVAL_SECONDS=max(5,int(os.getenv("MT5_PUSH_SECONDS","30")))
 BARS=max(100,min(2000,int(os.getenv("MT5_BARS","400"))))
 TIMEFRAME_NAME=os.getenv("MT5_TIMEFRAME","M5").upper()
+TIMEFRAME_NAMES=[x.strip().upper() for x in os.getenv("MT5_TIMEFRAMES",TIMEFRAME_NAME).split(",") if x.strip()]
 AUTOTRADE_LIVE=os.getenv("MT5_AUTOTRADE_LIVE","0")=="1"
 MAX_LOT=float(os.getenv("MT5_MAX_LOT","0.10"))
 RISK_PCT=float(os.getenv("MT5_RISK_PER_TRADE_PCT","0.5"))
@@ -145,20 +146,24 @@ def poll_intent(symbol):
     except Exception as e: print("erro AutoTrade",normalized,e)
 
 def push(symbol):
-    tf,tf_out=TF.get(TIMEFRAME_NAME,TF["M5"])
     tick=mt5.symbol_info_tick(symbol)
     if tick is None: raise RuntimeError(f"{symbol}: sem tick")
-    payload={
-        "source":"mt5","symbol":normalize_symbol(symbol),"assetClass":"forex","timeframe":tf_out,
-        "timestamp":datetime.now(timezone.utc).isoformat(),
-        "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
-        "candles":candles(symbol,tf,tf_out),
-        "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE}
-    }
-    r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
-    r.raise_for_status()
-    print(symbol,r.json())
-    if os.getenv("MT5_FETCH_SIGNAL","1")=="1":fetch_signal(symbol,tf_out)
+    for tf_name in TIMEFRAME_NAMES:
+        tf,tf_out=TF.get(tf_name,TF["M5"])
+        payload={
+            "source":"mt5","symbol":normalize_symbol(symbol),"assetClass":"forex","timeframe":tf_out,
+            "timestamp":datetime.now(timezone.utc).isoformat(),
+            "bid":float(tick.bid),"ask":float(tick.ask),"spread":float(tick.ask-tick.bid),
+            "candles":candles(symbol,tf,tf_out),
+            "meta":{"terminal":"MetaTrader5","originalSymbol":symbol,"assetClass":"forex","autoTradeLocal":AUTOTRADE_LIVE,"sourceTimeframe":tf_name}
+        }
+        r=requests.post(SAAS_URL+"/api/connectors/market-push",headers=headers(),data=json.dumps(payload),timeout=20)
+        r.raise_for_status()
+        j=r.json()
+        decision=j.get("decision") or {}
+        candidate=decision.get("candidate") or {}
+        print(symbol,tf_name,"push",j.get("candles"),"decisão",candidate.get("status"),candidate.get("side"),candidate.get("confidence"))
+        if os.getenv("MT5_FETCH_SIGNAL","1")=="1":fetch_signal(symbol,tf_out)
     if os.getenv("MT5_FETCH_AUTOTRADE","1")=="1":poll_intent(symbol)
 
 def main():
