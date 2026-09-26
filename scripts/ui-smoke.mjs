@@ -19,7 +19,11 @@ const symbols=[...catalog.matchAll(/"([A-Z]{3}\/[A-Z]{3})"/g)].map(m=>m[1]);
 const unique=[...new Set(symbols)];
 check("Forex: catálogo fallback >= 80 pares",unique.length>=80,String(unique.length));
 check("Forex: símbolos sem duplicação relevante",symbols.length===unique.length,String(symbols.length-unique.length)+" duplicados");
-check("Forex: sincronização MT5 disponível",read("connectors/mt5-bridge/bridge.py").includes("discover_forex_catalog"));
+const mt5Bridge=read("connectors/mt5-bridge/bridge.py");
+check("Forex: sincronização MT5 disponível",mt5Bridge.includes("discover_forex_catalog"));
+check("Forex: varredura total automática",mt5Bridge.includes("MT5_STREAM_ALL_FOREX")&&mt5Bridge.includes("build_full_scan_queue"));
+check("Forex: ingestão em lote",mt5Bridge.includes("/api/connectors/market-batch"));
+check("Forex: teste exaustivo local",exists("connectors/mt5-bridge/test-all-forex.py"));
 check("Forex: watchlist dinâmica disponível",exists("src/app/api/connectors/watchlist/route.ts"));
 check("Forex: frontend sem corte artificial de 120 pares",!forex.includes(".slice(0,120)"));
 
@@ -93,6 +97,8 @@ for(const p of [
  "src/app/api/connectors/analyze/route.ts",
  "src/app/api/connectors/status/route.ts",
  "src/app/api/connectors/watchlist/route.ts",
+ "src/app/api/connectors/market-batch/route.ts",
+ "src/app/api/system/forex-coverage/route.ts",
  "src/app/api/notifications/preferences/route.ts",
  "src/app/api/autotrade/radar/route.ts",
  "src/app/api/autotrade/config/route.ts",
