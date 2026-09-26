@@ -28,13 +28,29 @@ export default function AutoTradePage(){
       ]);
       const rj=await r.json();const cj=await c.json();
       if(!r.ok)throw new Error(rj.error||"Falha no radar");
-      if(notifications && typeof Notification!=="undefined" && Notification.permission==="granted"){\n        for(const x of (rj.candidates??[]).filter((v:Candidate)=>v.status==="APTO")){\n          const k=[x.source,x.symbol,x.timeframe,x.side,x.score].join(":");\n          if(!seenRef.current.has(k)){\n            new Notification(`MercadoAI: ${x.side==="BUY"?"COMPRA":"VENDA"} ${x.symbol}`,{body:`Confiança ${x.confidence}% · Score ${x.score} · Stop ${x.stopLoss?.toFixed(5)??"—"} · Alvo ${x.takeProfit?.toFixed(5)??"—"}`});\n            seenRef.current.add(k);\n          }\n        }\n      }\n      setRadar(rj);setCfg(cj);setError("");
+      if(notifications && typeof Notification!=="undefined" && Notification.permission==="granted"){
+        for(const x of (rj.candidates??[]).filter((v:Candidate)=>v.status==="APTO")){
+          const k=[x.source,x.symbol,x.timeframe,x.side,x.score].join(":");
+          if(!seenRef.current.has(k)){
+            new Notification(`MercadoAI: ${x.side==="BUY"?"COMPRA":"VENDA"} ${x.symbol}`,{body:`Confiança ${x.confidence}% · Score ${x.score} · Stop ${x.stopLoss?.toFixed(5)??"—"} · Alvo ${x.takeProfit?.toFixed(5)??"—"}`});
+            seenRef.current.add(k);
+          }
+        }
+      }
+      setRadar(rj);setCfg(cj);setError("");
     }catch(e){setError(e instanceof Error?e.message:"Falha ao carregar AutoTrade");}
   }
 
   useEffect(()=>{load();const id=setInterval(load,15000);return()=>clearInterval(id);},[]);
 
-  async function enableNotifications(){\n    if(typeof Notification==="undefined"){setError("Este navegador não suporta notificações.");return;}\n    const p=await Notification.requestPermission();\n    setNotifications(p==="granted");\n    if(p!=="granted")setError("Permissão de notificações não concedida.");\n  }\n\n  async function save(patch:Partial<Config>){
+  async function enableNotifications(){
+    if(typeof Notification==="undefined"){setError("Este navegador não suporta notificações.");return;}
+    const p=await Notification.requestPermission();
+    setNotifications(p==="granted");
+    if(p!=="granted")setError("Permissão de notificações não concedida.");
+  }
+
+  async function save(patch:Partial<Config>){
     setBusy(true);setError("");
     try{
       const r=await fetch("/api/autotrade/config",{
