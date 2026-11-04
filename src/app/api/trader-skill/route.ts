@@ -6,10 +6,17 @@ export const dynamic = "force-dynamic";
 
 type MarketCandle = {time:string;open:number;high:number;low:number;close:number;volume?:number;symbol?:string};
 
-function ageMinutes(value:unknown){
-  if(typeof value!=="string" || !value.trim()) return null;
-  const time=Date.parse(value);
-  return Number.isFinite(time)?Math.max(0,Math.round((Date.now()-time)/60000)):null;
+function normalizeTime(value:unknown):string|null{
+  if(value===null||value===undefined||value==="") return null;
+  const raw=String(value).trim();
+  const numeric=/^\\d{10,13}$/.test(raw)?Number(raw):NaN;
+  const millis=Number.isFinite(numeric)?(raw.length===10?numeric*1000:numeric):Date.parse(raw);
+  return Number.isFinite(millis)?new Date(millis).toISOString():null;
+}
+
+function ageMinutes(value:string|null){
+  if(!value) return null;
+  return Math.max(0,Math.round((Date.now()-Date.parse(value))/60000));
 }
 
 export async function GET(){
@@ -17,7 +24,7 @@ export async function GET(){
     const assets=await getPublicB3Assets();
     const items=assets.map((asset:any)=>{
       const candles=Array.isArray(asset.candles)?asset.candles as MarketCandle[]:[];
-      const timestamp=asset.marketTime??candles.at(-1)?.time??null;
+      const timestamp=normalizeTime(asset.marketTime)??normalizeTime(candles.at(-1)?.time);
       const age=ageMinutes(timestamp);
       const stale=asset.delayed!==false || age===null || age>15;
       let analysis:ReturnType<typeof analyzeCandles>|null=null;
